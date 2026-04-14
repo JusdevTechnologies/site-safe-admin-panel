@@ -5,6 +5,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     /**
      * Create OneTimePassword table for device uninstallation OTP verification
+     * Note: Base tables (devices, audit_logs, punch_records) are created in earlier migrations
      */
     await queryInterface.createTable('one_time_passwords', {
       id: {
@@ -73,98 +74,9 @@ module.exports = {
     await queryInterface.addIndex('one_time_passwords', ['device_id']);
     await queryInterface.addIndex('one_time_passwords', ['otp_code']);
     await queryInterface.addIndex('one_time_passwords', ['expires_at']);
-
-    /**
-     * Add push notification token fields to devices table
-     */
-    await queryInterface.addColumn('devices', 'push_notification_token', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Azure Notification Hub push notification token',
-    });
-
-    await queryInterface.addColumn('devices', 'notification_platform', {
-      type: Sequelize.ENUM('fcm', 'apns'),
-      allowNull: true,
-      comment: 'Push notification platform (FCM for Android, APNS for iOS)',
-    });
-
-    await queryInterface.addColumn('devices', 'last_push_notification_update', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: 'Timestamp of last push notification token update',
-    });
-
-    /**
-     * Add index on device_identifier for faster lookups
-     */
-    await queryInterface.addIndex('devices', ['device_identifier']);
-
-    /**
-     * Add audit tracking columns to devices table
-     */
-    await queryInterface.addColumn('devices', 'camera_blocked_by', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id',
-      },
-      comment: 'User ID of admin who blocked the camera',
-    });
-
-    await queryInterface.addColumn('devices', 'camera_blocked_at', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: 'Timestamp when camera was blocked',
-    });
-
-    /**
-     * Add indexes on audit_logs table for faster queries
-     */
-    await queryInterface.addIndex('audit_logs', ['user_id']);
-    await queryInterface.addIndex('audit_logs', ['entity_type', 'entity_id']);
-    await queryInterface.addIndex('audit_logs', ['created_at']);
-
-    /**
-     * Add index on punch_records table for recent activity queries
-     */
-    await queryInterface.addIndex('punch_records', ['employee_id', 'timestamp']);
-    await queryInterface.addIndex('punch_records', ['punch_type', 'timestamp']);
   },
 
   async down(queryInterface, Sequelize) {
-    /**
-     * Remove indexes from punch_records table
-     */
-    await queryInterface.removeIndex('punch_records', ['employee_id', 'timestamp']);
-    await queryInterface.removeIndex('punch_records', ['punch_type', 'timestamp']);
-
-    /**
-     * Remove indexes from audit_logs table
-     */
-    await queryInterface.removeIndex('audit_logs', ['user_id']);
-    await queryInterface.removeIndex('audit_logs', ['entity_type', 'entity_id']);
-    await queryInterface.removeIndex('audit_logs', ['created_at']);
-
-    /**
-     * Remove audit tracking columns from devices table
-     */
-    await queryInterface.removeColumn('devices', 'camera_blocked_by');
-    await queryInterface.removeColumn('devices', 'camera_blocked_at');
-
-    /**
-     * Remove indexes from devices table
-     */
-    await queryInterface.removeIndex('devices', ['device_identifier']);
-
-    /**
-     * Remove columns from devices table
-     */
-    await queryInterface.removeColumn('devices', 'push_notification_token');
-    await queryInterface.removeColumn('devices', 'notification_platform');
-    await queryInterface.removeColumn('devices', 'last_push_notification_update');
-
     /**
      * Remove indexes from OTP table
      */
