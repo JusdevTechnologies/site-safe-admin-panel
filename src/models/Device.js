@@ -46,6 +46,30 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSON,
         allowNull: true,
       },
+      push_notification_token: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      notification_platform: {
+        type: DataTypes.ENUM('fcm', 'apns'),
+        allowNull: true,
+      },
+      last_push_notification_update: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      camera_blocked_by: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'users',
+          key: 'id',
+        },
+      },
+      camera_blocked_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
       deleted_at: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -63,6 +87,11 @@ module.exports = (sequelize, DataTypes) => {
 
   Device.associate = (models) => {
     Device.belongsTo(models.Employee, { foreignKey: 'employee_id' });
+    Device.belongsTo(models.User, { 
+      foreignKey: 'camera_blocked_by', 
+      as: 'blockedByUser',
+      allowNull: true 
+    });
     Device.hasMany(models.DevicePolicy, { foreignKey: 'device_id' });
     Device.hasMany(models.NotificationLog, { foreignKey: 'device_id' });
   };

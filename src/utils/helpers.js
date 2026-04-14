@@ -98,6 +98,28 @@ const formatErrorResponse = (message, code = 'ERROR', statusCode = 500, details 
   };
 };
 
+/**
+ * Generate random OTP code
+ * @param {number} length - Length of OTP (default: 6)
+ * @returns {string} - Random OTP code
+ */
+const generateRandomOTP = (length = 6) => {
+  const min = Math.pow(10, length - 1);
+  const max = Math.pow(10, length) - 1;
+  return Math.floor(Math.random() * (max - min + 1) + min).toString();
+};
+
+/**
+ * Calculate OTP expiry time
+ * @param {number} minutes - Expiry time in minutes (default: 5)
+ * @returns {Date} - Expiry timestamp
+ */
+const calculateOTPExpiry = (minutes = 5) => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + minutes);
+  return now;
+};
+
 module.exports = {
   generateUUID,
   isValidUUID,
@@ -109,4 +131,6 @@ module.exports = {
   paginate,
   formatResponse,
   formatErrorResponse,
+  generateRandomOTP,
+  calculateOTPExpiry,
 };

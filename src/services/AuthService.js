@@ -98,6 +98,54 @@ class AuthService {
   }
 
   /**
+   * Admin login - Super admin only
+   */
+  async adminLogin(username, password) {
+    const user = await db.User.findOne({
+      where: { username },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError('Invalid credentials');
+    }
+
+    // Check if user is super admin
+    if (user.role !== 'super_admin') {
+      throw new UnauthorizedError('Access denied. Super admin role required.');
+    }
+
+    // Compare password
+    const isPasswordValid = await comparePassword(password, user.password_hash);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedError('Invalid credentials');
+    }
+
+    // Check user status
+    if (user.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedError(`Account is ${user.status}`);
+    }
+
+    // Update last login
+    await user.update({ last_login: new Date() });
+
+    logger.info(`Admin user logged in: ${user.id}`);
+
+    // Generate tokens
+    const tokens = generateTokenPair({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    });
+
+    return {
+      user: this.formatUser(user),
+      ...tokens,
+    };
+  }
+
+  /**
    * Refresh access token
    */
   async refreshToken(refreshToken) {

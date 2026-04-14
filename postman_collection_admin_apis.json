@@ -1,0 +1,1729 @@
+{
+  "info": {
+    "_postman_id": "admin-api-collection-site-safe",
+    "name": "Site Safe Admin Panel - Complete APIs",
+    "description": "Complete API collection for Site Safe Admin Panel including:\n\n**Admin Panel APIs (17 Endpoints):**\n- Authentication: Admin login, token refresh, user info, logout\n- Dashboard: Statistics, recent activities, device history, OTP summary\n- Device Management: List devices, block camera, unblock camera\n- OTP Management: Generate, get current, list history, admin list, verify\n- User Management: List admins, create admin, get user, update user, delete user\n\n**Mobile APIs (Existing):**\n- Device Registration\n- Device Status Monitoring\n- OTP-based Device Uninstallation\n\n**Authentication:** All admin endpoints require JWT token in Authorization header. Use Admin Login to obtain token.\n\n**API Base URL**: {{base_url}}/api/v1\n\n**Rate Limit**: 100 requests per 15 minutes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Admin Authentication",
+      "description": "Admin panel authentication endpoints",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate as admin user and receive JWT access token.\n\n**Request Body:**\n- `username` (string, 3-50 chars): Admin username\n- `password` (string, 6+ chars): Admin password\n\n**Response:** 200 OK with access & refresh tokens\n\n**Note:** Store the token from response and use in Authorization header for subsequent requests."
+          },
+          "response": [
+            {
+              "name": "Success - Logged In",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"SecurePassword123\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Admin login successful\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"username\": \"admin\",\n      \"email\": \"admin@company.com\",\n      \"first_name\": \"Admin\",\n      \"last_name\": \"User\",\n      \"role\": \"super_admin\"\n    },\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600\n  }\n}"
+            },
+            {
+              "name": "Error - Invalid Credentials",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"WrongPassword\"\n}"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Invalid username or password\",\n    \"code\": \"UNAUTHORIZED\",\n    \"statusCode\": 401\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Refresh JWT access token using refresh token.\n\n**Request Body:**\n- `refresh_token` (string): Valid refresh token from login\n\n**Response:** 200 OK with new access token"
+          },
+          "response": [
+            {
+              "name": "Success - Token Refreshed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Token refreshed successfully\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Get current authenticated admin user profile information.\n\n**Authentication:** Required - Provide access token in Authorization header\n\n**Response:** 200 OK with user profile details"
+          },
+          "response": [
+            {
+              "name": "Success - User Profile",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User profile retrieved successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"username\": \"admin\",\n    \"email\": \"admin@company.com\",\n    \"first_name\": \"Admin\",\n    \"last_name\": \"User\",\n    \"role\": \"super_admin\",\n    \"status\": \"ACTIVE\",\n    \"created_at\": \"2026-01-15T10:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout and invalidate current token.\n\n**Authentication:** Required - Provide access token in Authorization header\n\n**Response:** 200 OK with logout confirmation"
+          },
+          "response": [
+            {
+              "name": "Success - Logged Out",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logout successful\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Admin dashboard statistics and analytics endpoints",
+      "item": [
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/stats?startDate=2026-04-01&endDate=2026-04-30&deviceStatus=active",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "dashboard",
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2026-04-01",
+                  "disabled": false
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-04-30",
+                  "disabled": false
+                },
+                {
+                  "key": "deviceStatus",
+                  "value": "active",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get key device statistics for dashboard display.\n\n**Authentication:** Required\n\n**Query Parameters:**\n- `startDate` (ISO 8601, optional): Filter start date\n- `endDate` (ISO 8601, optional): Filter end date\n- `deviceStatus` (string, optional): Filter by status (active/inactive/blocked/lost)\n\n**Response:** 200 OK with statistics\n\n**Returns:**\n- Total active devices\n- Total inactive devices\n- Blocked devices count\n- Lost devices count"
+          },
+          "response": [
+            {
+              "name": "Success - Stats Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Dashboard statistics retrieved successfully\",\n  \"data\": {\n    \"stats\": {\n      \"total_devices\": 145,\n      \"active_devices\": 128,\n      \"inactive_devices\": 12,\n      \"blocked_devices\": 5,\n      \"lost_devices\": 0\n    },\n    \"period\": {\n      \"start_date\": \"2026-04-01T00:00:00.000Z\",\n      \"end_date\": \"2026-04-30T23:59:59.999Z\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Recent Activities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/activities?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "dashboard",
+                "activities"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Get paginated list of recent employee activities (punch in/out records).\n\n**Authentication:** Required\n\n**Query Parameters:**\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=10, max=100): Records per page\n\n**Response:** 200 OK with paginated activities"
+          },
+          "response": [
+            {
+              "name": "Success - Activities Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Recent activities retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n      \"employee_id\": \"EMP001\",\n      \"employee_name\": \"John Doe\",\n      \"punch_type\": \"in\",\n      \"timestamp\": \"2026-04-14T09:00:00.000Z\",\n      \"device_id\": \"DEVICE123\"\n    }\n  ],\n  \"meta\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 150,\n      \"total_pages\": 8\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Device Management History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/device-history?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "dashboard",
+                "device-history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Get audit trail of device management actions (block/unblock operations).\n\n**Authentication:** Required\n\n**Query Parameters:**\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=10, max=100): Records per page\n\n**Response:** 200 OK with paginated audit trail"
+          },
+          "response": [
+            {
+              "name": "Success - History Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device management history retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"audit-001\",\n      \"action\": \"device_camera_blocked\",\n      \"device_id\": \"DEVICE123\",\n      \"device_identifier\": \"DEVICE123\",\n      \"user_id\": \"admin-user-id\",\n      \"admin_name\": \"Admin User\",\n      \"reason\": \"Policy violation\",\n      \"timestamp\": \"2026-04-14T10:30:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 45,\n      \"total_pages\": 3\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get OTP Generation Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/otp-summary?startDate=2026-04-01&endDate=2026-04-30",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "dashboard",
+                "otp-summary"
+              ],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2026-04-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-04-30",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get OTP generation statistics summary.\n\n**Authentication:** Required\n\n**Query Parameters:**\n- `startDate` (ISO 8601, optional): Filter start date\n- `endDate` (ISO 8601, optional): Filter end date\n\n**Response:** 200 OK with OTP statistics\n\n**Returns:**\n- Total OTPs generated\n- Used OTPs count\n- Pending OTPs count\n- Expired OTPs count"
+          },
+          "response": [
+            {
+              "name": "Success - OTP Summary Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP generation summary retrieved successfully\",\n  \"data\": {\n    \"summary\": {\n      \"total_generated\": 87,\n      \"total_used\": 65,\n      \"total_pending\": 15,\n      \"total_expired\": 7\n    },\n    \"period\": {\n      \"start_date\": \"2026-04-01T00:00:00.000Z\",\n      \"end_date\": \"2026-04-30T23:59:59.999Z\"\n    }\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Device Management",
+      "description": "Admin device management endpoints (block/unblock camera)",
+      "item": [
+        {
+          "name": "List Devices (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/devices?page=1&limit=20&search=&status=active&os=android",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "os",
+                  "value": "android",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all devices with filtering, search, and pagination.\n\n**Authentication:** Required (super_admin/admin only)\n\n**Query Parameters:**\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=10, max=100): Records per page\n- `search` (string, optional): Search by device ID, name, or employee ID\n- `status` (string, optional): Filter by status (active/inactive/blocked)\n- `os` (string, optional): Filter by OS (android/ios)\n- `sortBy` (string, optional): Sort field (created_at, status)\n- `sortOrder` (string, optional): Sort order (asc/desc)\n\n**Response:** 200 OK with paginated device list"
+          },
+          "response": [
+            {
+              "name": "Success - Devices Listed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Devices retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n      \"device_identifier\": \"DEVICE123\",\n      \"device_name\": \"Samsung Galaxy S23\",\n      \"device_os\": \"android\",\n      \"status\": \"active\",\n      \"camera_blocked\": false,\n      \"employee_id\": \"EMP001\",\n      \"employee_name\": \"John Doe\",\n      \"created_at\": \"2026-04-10T10:00:00.000Z\",\n      \"last_sync\": \"2026-04-14T05:30:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 145,\n      \"total_pages\": 8\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Block Device Camera",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"reason\": \"Policy violation - unauthorized camera access attempt\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/devices/{{device_id}}/block-camera",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "devices",
+                "{{device_id}}",
+                "block-camera"
+              ]
+            },
+            "description": "Block camera on a specific device. Admin action is logged in audit trail.\n\n**Authentication:** Required (super_admin/admin only)\n\n**URL Parameters:**\n- `device_id` (UUID): Device ID to block\n\n**Request Body:**\n- `reason` (string, optional): Reason for blocking camera\n\n**Response:** 200 OK with updated device that includes:\n- camera_blocked: true\n- camera_blocked_by: Admin user details\n- camera_blocked_at: Timestamp of blocking"
+          },
+          "response": [
+            {
+              "name": "Success - Camera Blocked",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Policy violation\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device camera blocked successfully\",\n  \"data\": {\n    \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"DEVICE123\",\n    \"device_name\": \"Samsung Galaxy S23\",\n    \"camera_blocked\": true,\n    \"camera_blocked_at\": \"2026-04-14T10:30:00.000Z\",\n    \"camera_blocked_by\": {\n      \"id\": \"admin-user-id\",\n      \"username\": \"admin\",\n      \"first_name\": \"Admin\",\n      \"last_name\": \"User\"\n    }\n  }\n}"
+            },
+            {
+              "name": "Error - Device Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Device not found\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Unblock Device Camera",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"reason\": \"Device returned and verified - re-enabling camera\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/devices/{{device_id}}/unblock-camera",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "devices",
+                "{{device_id}}",
+                "unblock-camera"
+              ]
+            },
+            "description": "Unblock camera on a specific device. Admin action is logged in audit trail.\n\n**Authentication:** Required (super_admin/admin only)\n\n**URL Parameters:**\n- `device_id` (UUID): Device ID to unblock\n\n**Request Body:**\n- `reason` (string, optional): Reason for unblocking camera\n\n**Response:** 200 OK with updated device showing camera unblocked"
+          },
+          "response": [
+            {
+              "name": "Success - Camera Unblocked",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Device verified\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device camera unblocked successfully\",\n  \"data\": {\n    \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"DEVICE123\",\n    \"device_name\": \"Samsung Galaxy S23\",\n    \"camera_blocked\": false,\n    \"camera_blocked_at\": null,\n    \"camera_blocked_by\": null\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OTP Management",
+      "description": "OTP generation and management endpoints for admin panel",
+      "item": [
+        {
+          "name": "Generate OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/otp/generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "otp",
+                "generate"
+              ]
+            },
+            "description": "Generate a new OTP for device uninstallation.\n\n**Authentication:** Required (super_admin/admin only)\n\n**Request Body:**\n- `device_id` (UUID): Device ID for OTP generation\n\n**OTP Specifications:**\n- Length: 8 digits\n- Validity: 5 minutes\n- Format: Numeric\n\n**Response:** 201 Created with OTP code"
+          },
+          "response": [
+            {
+              "name": "Success - OTP Generated",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP generated successfully\",\n  \"data\": {\n    \"id\": \"otp-uuid-001\",\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"otp_code\": \"12345678\",\n    \"status\": \"pending\",\n    \"expires_at\": \"2026-04-14T10:35:00.000Z\",\n    \"created_at\": \"2026-04-14T10:30:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Current OTP",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/otp/current?device_id=660e8400-e29b-41d4-a716-446655440001",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "otp",
+                "current"
+              ],
+              "query": [
+                {
+                  "key": "device_id",
+                  "value": "660e8400-e29b-41d4-a716-446655440001",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Get the current active OTP for a specific device.\n\n**Authentication:** Required (super_admin/admin only)\n\n**Query Parameters:**\n- `device_id` (UUID): Device ID to retrieve OTP for\n\n**Response:** 200 OK with current OTP if exists, or 404 if none active"
+          },
+          "response": [
+            {
+              "name": "Success - Current OTP Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Current OTP retrieved successfully\",\n  \"data\": {\n    \"id\": \"otp-uuid-001\",\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"otp_code\": \"12345678\",\n    \"status\": \"pending\",\n    \"expires_at\": \"2026-04-14T10:35:00.000Z\",\n    \"created_at\": \"2026-04-14T10:30:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List OTP History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/otp/history?device_id=660e8400-e29b-41d4-a716-446655440001&page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "otp",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "device_id",
+                  "value": "660e8400-e29b-41d4-a716-446655440001",
+                  "disabled": false
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Get paginated OTP history for a specific device.\n\n**Authentication:** Required (super_admin/admin only)\n\n**Query Parameters:**\n- `device_id` (UUID): Device ID\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=10, max=100): Records per page\n\n**Response:** 200 OK with paginated OTP history"
+          },
+          "response": [
+            {
+              "name": "Success - OTP History Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP history retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"otp-uuid-001\",\n      \"otp_code\": \"12345678\",\n      \"status\": \"used\",\n      \"created_at\": \"2026-04-14T09:30:00.000Z\",\n      \"expires_at\": \"2026-04-14T09:35:00.000Z\",\n      \"used_at\": \"2026-04-14T09:32:15.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 8,\n      \"total_pages\": 1\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List All OTPs (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/otp/list?page=1&limit=20&status=pending&startDate=2026-04-01&endDate=2026-04-30",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "otp",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2026-04-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-04-30",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all OTPs with filtering and pagination.\n\n**Authentication:** Required (super_admin/admin only)\n\n**Query Parameters:**\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=10, max=100): Records per page\n- `status` (string, optional): Filter by status (pending/used/expired)\n- `startDate` (ISO 8601, optional): Filter start date\n- `endDate` (ISO 8601, optional): Filter end date\n\n**Response:** 200 OK with paginated OTP list"
+          },
+          "response": [
+            {
+              "name": "Success - OTPs Listed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTPs retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"otp-uuid-001\",\n      \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n      \"device_identifier\": \"DEVICE123\",\n      \"employee_id\": \"EMP001\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-04-14T10:30:00.000Z\",\n      \"expires_at\": \"2026-04-14T10:35:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 25,\n      \"total_pages\": 2\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"otp_code\": \"12345678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/otp/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "otp",
+                "verify"
+              ]
+            },
+            "description": "Verify OTP for device uninstallation (used by mobile app or admin).\n\n**Authentication:** Required (super_admin/admin only)\n\n**Request Body:**\n- `device_id` (UUID): Device ID\n- `otp_code` (string): 8-digit OTP to verify\n\n**Validation:**\n- OTP must be exactly 8 digits\n- OTP must not be expired (5-minute window)\n- Maximum 3 verification attempts per OTP\n\n**Response:** 200 OK if verified, 401 if invalid/expired/max attempts exceeded"
+          },
+          "response": [
+            {
+              "name": "Success - OTP Verified",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP verified successfully\",\n  \"data\": {\n    \"otp_id\": \"otp-uuid-001\",\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"status\": \"used\",\n    \"verified_at\": \"2026-04-14T10:32:15.000Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - Invalid OTP",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Invalid OTP. 2 attempts remaining.\",\n    \"code\": \"UNAUTHORIZED\",\n    \"statusCode\": 401\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "description": "Admin user management endpoints (CRUD operations)",
+      "item": [
+        {
+          "name": "List Admins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users?page=1&limit=20&search=&status=ACTIVE&role=admin",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "admin",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all admin users with filtering, search, and pagination.\n\n**Authentication:** Required (super_admin only)\n\n**Query Parameters:**\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=10, max=100): Records per page\n- `search` (string, optional): Search by username, email, or name\n- `status` (string, optional): Filter by status (ACTIVE/INACTIVE)\n- `role` (string, optional): Filter by role (super_admin/admin)\n- `sortBy` (string, optional): Sort field (created_at, username)\n- `sortOrder` (string, optional): Sort order (asc/desc)\n\n**Response:** 200 OK with paginated user list"
+          },
+          "response": [
+            {
+              "name": "Success - Admins Listed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Users retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"username\": \"admin\",\n      \"email\": \"admin@company.com\",\n      \"first_name\": \"Admin\",\n      \"last_name\": \"User\",\n      \"role\": \"super_admin\",\n      \"status\": \"ACTIVE\",\n      \"created_at\": \"2026-01-15T10:00:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 5,\n      \"total_pages\": 1\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Admin User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newadmin\",\n  \"email\": \"newadmin@company.com\",\n  \"password\": \"SecurePassword123\",\n  \"first_name\": \"New\",\n  \"last_name\": \"Admin\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Create a new admin user.\n\n**Authentication:** Required (super_admin only)\n\n**Request Body:**\n- `username` (string, 3-50 chars, alphanumeric): Unique username\n- `email` (string): Valid email address\n- `password` (string, 8+ chars): Password with uppercase, lowercase, numbers\n- `first_name` (string): First name\n- `last_name` (string): Last name\n- `role` (string): User role (super_admin/admin only)\n\n**Response:** 201 Created with new user details"
+          },
+          "response": [
+            {
+              "name": "Success - Admin Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User created successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n    \"username\": \"newadmin\",\n    \"email\": \"newadmin@company.com\",\n    \"first_name\": \"New\",\n    \"last_name\": \"Admin\",\n    \"role\": \"admin\",\n    \"status\": \"ACTIVE\",\n    \"created_at\": \"2026-04-14T10:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - Username Already Exists",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Username already exists\",\n    \"code\": \"CONFLICT\",\n    \"statusCode\": 409\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Get specific admin user profile.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `user_id` (UUID): User ID to retrieve\n\n**Response:** 200 OK with user details"
+          },
+          "response": [
+            {
+              "name": "Success - User Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User retrieved successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n    \"username\": \"newadmin\",\n    \"email\": \"newadmin@company.com\",\n    \"first_name\": \"New\",\n    \"last_name\": \"Admin\",\n    \"role\": \"admin\",\n    \"status\": \"ACTIVE\",\n    \"created_at\": \"2026-04-14T10:30:00.000Z\",\n    \"updated_at\": \"2026-04-14T10:30:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"updated@company.com\",\n  \"first_name\": \"Updated\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Update admin user information (partial update).\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `user_id` (UUID): User ID to update\n\n**Request Body (all optional):**\n- `email` (string): New email address\n- `first_name` (string): New first name\n- `last_name` (string): New last name\n- `password` (string, 8+ chars): New password\n- `status` (string): Status (ACTIVE/INACTIVE)\n- `role` (string): Role (super_admin/admin - cannot be changed to viewer)\n\n**Response:** 200 OK with updated user details"
+          },
+          "response": [
+            {
+              "name": "Success - User Updated",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User updated successfully\",\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n    \"username\": \"newadmin\",\n    \"email\": \"updated@company.com\",\n    \"first_name\": \"Updated\",\n    \"last_name\": \"Admin\",\n    \"role\": \"admin\",\n    \"status\": \"ACTIVE\",\n    \"updated_at\": \"2026-04-14T11:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Delete (soft delete) an admin user.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `user_id` (UUID): User ID to delete\n\n**Note:** This performs a soft delete - user record is preserved with deletion timestamp for audit trail.\n\n**Response:** 200 OK with success message"
+          },
+          "response": [
+            {
+              "name": "Success - User Deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mobile API - Device Registration",
+      "description": "Mobile app device registration flows",
+      "item": [
+        {
+          "name": "Register Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"{{employee_id}}\",\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"device_os\": \"android\",\n  \"device_name\": \"Samsung Galaxy S23\",\n  \"push_notification_token\": \"exampleFCMToken1234567890abcdefghijklmnop\",\n  \"notification_platform\": \"fcm\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/devices/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mobile",
+                "devices",
+                "register"
+              ]
+            },
+            "description": "Register a new mobile device with push notification token for Firebase Cloud Messaging (FCM) or Apple Push Notification Service (APNS).\n\n**Request Parameters:**\n- `employee_id` (UUID): Unique employee identifier\n- `device_identifier` (string): Unique device identifier (IMEI, serial number, or UUID)\n- `device_os` (enum): Operating system - \"android\" or \"ios\"\n- `device_name` (string, optional): Display name for the device\n- `push_notification_token` (string): Firebase or APNS token\n- `notification_platform` (enum): \"fcm\" (Android) or \"apns\" (iOS)\n\n**Response:** 201 Created with device details"
+          },
+          "response": [
+            {
+              "name": "Success - Device Registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employee_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n  \"device_os\": \"android\",\n  \"device_name\": \"Samsung Galaxy S23\",\n  \"push_notification_token\": \"exampleFCMToken1234567890abcdefghijklmnop\",\n  \"notification_platform\": \"fcm\"\n}"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device registered successfully\",\n  \"data\": {\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n    \"device_os\": \"android\",\n    \"device_name\": \"Samsung Galaxy S23\",\n    \"status\": \"active\",\n    \"camera_blocked\": false,\n    \"employee_id\": \"EMP001\",\n    \"user\": {\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\",\n      \"email\": \"john.doe@company.com\"\n    },\n    \"timestamp\": \"2026-04-14T10:30:45.123Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mobile API - Device Status",
+      "description": "Mobile app device status monitoring",
+      "item": [
+        {
+          "name": "Get Device Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/devices/{{device_identifier}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mobile",
+                "devices",
+                "{{device_identifier}}",
+                "status"
+              ]
+            },
+            "description": "Retrieve the current device status and user details. Call this endpoint when the app opens to display current camera status and user information.\n\n**URL Parameters:**\n- `deviceIdentifier` (path): Unique device identifier (same as used in registration)\n\n**Response:** 200 OK with device status and user details"
+          },
+          "response": [
+            {
+              "name": "Success - Device Status Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "header": []
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device status retrieved successfully\",\n  \"data\": {\n    \"device\": {\n      \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n      \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n      \"device_os\": \"android\",\n      \"device_name\": \"Samsung Galaxy S23\",\n      \"status\": \"active\",\n      \"camera_blocked\": true,\n      \"last_sync\": \"2026-04-14T10:25:30.000Z\"\n    },\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\",\n      \"email\": \"john.doe@company.com\",\n      \"employee_id\": \"EMP001\",\n      \"department\": \"Engineering\"\n    },\n    \"timestamp\": \"2026-04-14T10:30:45.123Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mobile API - Device Uninstallation",
+      "description": "Mobile app OTP-based device uninstallation flows",
+      "item": [
+        {
+          "name": "Request OTP for Uninstallation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/devices/uninstall/otp-request",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mobile",
+                "devices",
+                "uninstall",
+                "otp-request"
+              ]
+            },
+            "description": "Request a One-Time Password (OTP) for device uninstallation. This is part of the employee offboarding flow when an employee leaves the organization.\n\n**OTP Specifications:**\n- Length: 8 digits\n- Validity: 5 minutes\n- Max Attempts: 3 per OTP\n- Purpose: Device uninstallation verification\n\n**Request Parameters:**\n- `device_identifier` (string): Unique device identifier (same as registration)\n\n**Response:** 200 OK with OTP confirmation\n\n**Security Note:** In production, OTP is sent via SMS/Email. In development, it's included in the response for testing."
+          },
+          "response": [
+            {
+              "name": "Success - OTP Sent",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP request processed successfully\",\n  \"data\": {\n    \"status\": \"otp_sent\",\n    \"message\": \"OTP has been sent to your registered email/SMS\",\n    \"expires_in_minutes\": 5,\n    \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n    \"otp_for_testing\": \"12345678\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Validate OTP for Uninstallation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"otp_code\": \"12345678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/devices/uninstall/otp-validate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mobile",
+                "devices",
+                "uninstall",
+                "otp-validate"
+              ]
+            },
+            "description": "Validate the OTP received by the user and authorize device uninstallation. Upon successful validation, the device status is set to \"inactive\" and marked for removal.\n\n**Validation Constraints:**\n- OTP Length: Exactly 8 digits\n- OTP Validity: 5 minutes from generation\n- Attempt Limit: 3 attempts maximum\n- OTP Format: Numeric only\n\n**Request Parameters:**\n- `device_identifier` (string): Unique device identifier\n- `otp_code` (string): 8-digit OTP code received by user\n\n**Response:** 200 OK when OTP is verified"
+          },
+          "response": [
+            {
+              "name": "Success - OTP Verified",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n  \"otp_code\": \"12345678\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP validated successfully\",\n  \"data\": {\n    \"status\": \"otp_verified\",\n    \"message\": \"OTP verified successfully. Device uninstallation authorized.\",\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n    \"timestamp\": \"2026-04-14T10:30:45.123Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Base URL of the backend server. Update for production, staging, or different ports."
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token from admin login. Automatically set after login. Use in Authorization header: Bearer {{access_token}}"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT refresh token from admin login. Use to refresh access token when expired."
+    },
+    {
+      "key": "employee_id",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string",
+      "description": "Employee UUID from database. Get from: SELECT id FROM employees LIMIT 1;"
+    },
+    {
+      "key": "device_identifier",
+      "value": "EMULATOR_IMEI_123456789",
+      "type": "string",
+      "description": "Unique device identifier (IMEI, serial number, or UUID). Must be unique per device."
+    },
+    {
+      "key": "device_id",
+      "value": "660e8400-e29b-41d4-a716-446655440001",
+      "type": "string",
+      "description": "Device UUID from database or response body. Get from device list or after registration."
+    },
+    {
+      "key": "user_id",
+      "value": "550e8400-e29b-41d4-a716-446655440005",
+      "type": "string",
+      "description": "Admin user UUID from database. Get from admin user list or create user response."
+    },
+    {
+      "key": "otp_code",
+      "value": "12345678",
+      "type": "string",
+      "description": "8-digit OTP code. Get from OTP request response in development mode."
+    }
+  ]
+}

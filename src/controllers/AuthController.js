@@ -3,6 +3,24 @@ const logger = require('../utils/logger');
 const { formatResponse } = require('../utils/helpers');
 
 class AuthController {
+  /**
+   * Admin login
+   * POST /api/v1/auth/admin/login
+   */
+  async adminLogin(req, res, next) {
+    try {
+      const { username, password } = req.body;
+
+      const result = await AuthService.adminLogin(username, password);
+
+      res.status(200).json(
+        formatResponse(result, 'Admin login successful'),
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async register(req, res, next) {
     try {
       const { username, email, password, firstName, lastName } = req.body;

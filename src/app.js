@@ -12,9 +12,11 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 // Import routes
 const indexRoutes = require('./routes/index');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 const userRoutes = require('./routes/users');
 const deviceRoutes = require('./routes/devices');
 const employeeRoutes = require('./routes/employees');
+const mobileRoutes = require('./routes/mobile');
 
 const logger = require('./utils/logger');
 
@@ -55,10 +57,12 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/', indexRoutes);
+app.use('/api/v1', adminRoutes); // Admin routes (includes /auth/admin/login and /admin/*)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/devices', deviceRoutes);
 app.use('/api/v1/employees', employeeRoutes);
+app.use('/api/v1/mobile', mobileRoutes);
 
 // ============================================
 // 404 HANDLER

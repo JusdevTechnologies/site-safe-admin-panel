@@ -4,6 +4,7 @@ const NotFoundError = require('../exceptions/NotFoundError');
 const ConflictError = require('../exceptions/ConflictError');
 const { USER_STATUS, USER_ROLES } = require('../constants');
 const logger = require('../utils/logger');
+const { Op } = require('sequelize');
 
 class UserService {
   /**
@@ -28,6 +29,61 @@ class UserService {
   }
 
   /**
+   * Get admin users list with search and filtering
+   * Only returns super_admin and admin users
+   */
+  async getAdminUsersList(pagination, filters = {}) {
+    try {
+      const { page = 1, limit = 20, offset = 0 } = pagination;
+      const where = {
+        role: {
+          [Op.in]: ['super_admin', 'admin'],
+        },
+        deleted_at: null,
+      };
+
+      // Apply search filter
+      if (filters.search) {
+        where[Op.or] = [
+          { username: { [Op.iLike]: `%${filters.search}%` } },
+          { email: { [Op.iLike]: `%${filters.search}%` } },
+          { first_name: { [Op.iLike]: `%${filters.search}%` } },
+          { last_name: { [Op.iLike]: `%${filters.search}%` } },
+        ];
+      }
+
+      // Apply status filter
+      if (filters.status) {
+        where.status = filters.status;
+      }
+
+      // Apply role filter
+      if (filters.role) {
+        where.role = filters.role;
+      }
+
+      const { count, rows } = await db.User.findAndCountAll({
+        where,
+        attributes: { exclude: ['password_hash'] },
+        order: [['created_at', 'DESC']],
+        limit,
+        offset,
+        subQuery: false,
+      });
+
+      return {
+        data: rows.map((user) => this.formatUser(user)),
+        total: count,
+        page,
+        limit,
+      };
+    } catch (error) {
+      logger.error(`Error getting admin users list: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Get user by ID
    */
   async getUserById(userId) {
@@ -38,6 +94,47 @@ class UserService {
     if (!user) {
       throw new NotFoundError('User not found');
     }
+
+    return this.formatUser(user);
+  }
+
+  /**
+   * Create new admin user (CRUD operation for super admin)
+   */
+  async createAdminUser(userData) {
+    const { username, email, password, firstName, lastName, role = 'admin' } = userData;
+
+    // Validate role - only allow admin and super_admin roles
+    if (!['super_admin', 'admin'].includes(role)) {
+      throw new ConflictError('Invalid role. Must be super_admin or admin');
+    }
+
+    // Check if user already exists
+    const existingUser = await db.User.findOne({
+      where: {
+        [db.Sequelize.Op.or]: [{ username }, { email }],
+      },
+    });
+
+    if (existingUser) {
+      throw new ConflictError('Username or email already exists');
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
+
+    // Create user
+    const user = await db.User.create({
+      username,
+      email,
+      password_hash: passwordHash,
+      first_name: firstName,
+      last_name: lastName,
+      role,
+      status: USER_STATUS.ACTIVE,
+    });
+
+    logger.info(`Admin user created: ${user.id} with role ${role}`);
 
     return this.formatUser(user);
   }
