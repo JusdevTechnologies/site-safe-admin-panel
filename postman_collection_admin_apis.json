@@ -31,15 +31,9 @@
               "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"SecurePassword123\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/auth/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "auth",
-                "login"
-              ]
+              "raw": "{{base_url}}/api/v1/auth/admin/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "admin", "login"]
             },
             "description": "Authenticate as admin user and receive JWT access token.\n\n**Request Body:**\n- `username` (string, 3-50 chars): Admin username\n- `password` (string, 6+ chars): Admin password\n\n**Response:** 200 OK with access & refresh tokens\n\n**Note:** Store the token from response and use in Authorization header for subsequent requests."
           },
@@ -117,15 +111,9 @@
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/auth/refresh",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "auth",
-                "refresh"
-              ]
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
             },
             "description": "Refresh JWT access token using refresh token.\n\n**Request Body:**\n- `refresh_token` (string): Valid refresh token from login\n\n**Response:** 200 OK with new access token"
           },
@@ -170,15 +158,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/auth/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "auth",
-                "me"
-              ]
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
             },
             "description": "Get current authenticated admin user profile information.\n\n**Authentication:** Required - Provide access token in Authorization header\n\n**Response:** 200 OK with user profile details"
           },
@@ -218,15 +200,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "auth",
-                "logout"
-              ]
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
             },
             "description": "Logout and invalidate current token.\n\n**Authentication:** Required - Provide access token in Authorization header\n\n**Response:** 200 OK with logout confirmation"
           },
@@ -277,15 +253,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/dashboard/stats?startDate=2026-04-01&endDate=2026-04-30&deviceStatus=active",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "dashboard",
-                "stats"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/dashboard/stats?startDate=2026-04-01&endDate=2026-04-30&deviceStatus=active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "dashboard", "stats"],
               "query": [
                 {
                   "key": "startDate",
@@ -347,15 +317,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/dashboard/activities?page=1&limit=20",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "dashboard",
-                "activities"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/dashboard/activities?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "dashboard", "activities"],
               "query": [
                 {
                   "key": "page",
@@ -412,15 +376,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/dashboard/device-history?page=1&limit=20",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "dashboard",
-                "device-history"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/dashboard/device-history?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "dashboard", "device-history"],
               "query": [
                 {
                   "key": "page",
@@ -477,15 +435,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/dashboard/otp-summary?startDate=2026-04-01&endDate=2026-04-30",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "dashboard",
-                "otp-summary"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/dashboard/otp-summary?startDate=2026-04-01&endDate=2026-04-30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "dashboard", "otp-summary"],
               "query": [
                 {
                   "key": "startDate",
@@ -548,14 +500,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/devices?page=1&limit=20&search=&status=active&os=android",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "devices"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/devices?page=1&limit=20&search=&status=active&os=android",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "devices"],
               "query": [
                 {
                   "key": "page",
@@ -626,21 +573,10 @@
                 "type": "text"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"reason\": \"Policy violation - unauthorized camera access attempt\"\n}"
-            },
             "url": {
-              "raw": "{{base_url}}/admin/devices/{{device_id}}/block-camera",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "devices",
-                "{{device_id}}",
-                "block-camera"
-              ]
+              "raw": "{{base_url}}/api/v1/admin/devices/{{device_id}}/block",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "devices", "{{device_id}}", "block"]
             },
             "description": "Block camera on a specific device. Admin action is logged in audit trail.\n\n**Authentication:** Required (super_admin/admin only)\n\n**URL Parameters:**\n- `device_id` (UUID): Device ID to block\n\n**Request Body:**\n- `reason` (string, optional): Reason for blocking camera\n\n**Response:** 200 OK with updated device that includes:\n- camera_blocked: true\n- camera_blocked_by: Admin user details\n- camera_blocked_at: Timestamp of blocking"
           },
@@ -709,21 +645,10 @@
                 "type": "text"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"reason\": \"Device returned and verified - re-enabling camera\"\n}"
-            },
             "url": {
-              "raw": "{{base_url}}/admin/devices/{{device_id}}/unblock-camera",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "devices",
-                "{{device_id}}",
-                "unblock-camera"
-              ]
+              "raw": "{{base_url}}/api/v1/admin/devices/{{device_id}}/unblock",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "devices", "{{device_id}}", "unblock"]
             },
             "description": "Unblock camera on a specific device. Admin action is logged in audit trail.\n\n**Authentication:** Required (super_admin/admin only)\n\n**URL Parameters:**\n- `device_id` (UUID): Device ID to unblock\n\n**Request Body:**\n- `reason` (string, optional): Reason for unblocking camera\n\n**Response:** 200 OK with updated device showing camera unblocked"
           },
@@ -782,15 +707,9 @@
               "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/otp/generate",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "otp",
-                "generate"
-              ]
+              "raw": "{{base_url}}/api/v1/admin/otp/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "otp", "generate"]
             },
             "description": "Generate a new OTP for device uninstallation.\n\n**Authentication:** Required (super_admin/admin only)\n\n**Request Body:**\n- `device_id` (UUID): Device ID for OTP generation\n\n**OTP Specifications:**\n- Length: 8 digits\n- Validity: 5 minutes\n- Format: Numeric\n\n**Response:** 201 Created with OTP code"
           },
@@ -835,21 +754,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/otp/current?device_id=660e8400-e29b-41d4-a716-446655440001",
-              "host": [
-                "{{base_url}}"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/otp/device/660e8400-e29b-41d4-a716-446655440001",
+              "host": ["{{base_url}}"],
               "path": [
+                "api",
+                "v1",
                 "admin",
                 "otp",
-                "current"
-              ],
-              "query": [
-                {
-                  "key": "device_id",
-                  "value": "660e8400-e29b-41d4-a716-446655440001",
-                  "disabled": false
-                }
+                "device",
+                "660e8400-e29b-41d4-a716-446655440001"
               ]
             },
             "description": "Get the current active OTP for a specific device.\n\n**Authentication:** Required (super_admin/admin only)\n\n**Query Parameters:**\n- `device_id` (UUID): Device ID to retrieve OTP for\n\n**Response:** 200 OK with current OTP if exists, or 404 if none active"
@@ -895,21 +808,18 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/otp/history?device_id=660e8400-e29b-41d4-a716-446655440001&page=1&limit=20",
-              "host": [
-                "{{base_url}}"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/otp/device/660e8400-e29b-41d4-a716-446655440001/history?page=1&limit=20",
+              "host": ["{{base_url}}"],
               "path": [
+                "api",
+                "v1",
                 "admin",
                 "otp",
+                "device",
+                "660e8400-e29b-41d4-a716-446655440001",
                 "history"
               ],
               "query": [
-                {
-                  "key": "device_id",
-                  "value": "660e8400-e29b-41d4-a716-446655440001",
-                  "disabled": false
-                },
                 {
                   "key": "page",
                   "value": "1",
@@ -965,15 +875,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/otp/list?page=1&limit=20&status=pending&startDate=2026-04-01&endDate=2026-04-30",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "otp",
-                "list"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/otp?page=1&limit=20&status=pending&startDate=2026-04-01&endDate=2026-04-30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "otp"],
               "query": [
                 {
                   "key": "page",
@@ -1049,15 +953,9 @@
               "raw": "{\n  \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"otp_code\": \"12345678\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/otp/verify",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "otp",
-                "verify"
-              ]
+              "raw": "{{base_url}}/api/v1/otp/verify",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "otp", "verify"]
             },
             "description": "Verify OTP for device uninstallation (used by mobile app or admin).\n\n**Authentication:** Required (super_admin/admin only)\n\n**Request Body:**\n- `device_id` (UUID): Device ID\n- `otp_code` (string): 8-digit OTP to verify\n\n**Validation:**\n- OTP must be exactly 8 digits\n- OTP must not be expired (5-minute window)\n- Maximum 3 verification attempts per OTP\n\n**Response:** 200 OK if verified, 401 if invalid/expired/max attempts exceeded"
           },
@@ -1129,14 +1027,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users?page=1&limit=20&search=&status=ACTIVE&role=admin",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users"
-              ],
+              "raw": "{{base_url}}/api/v1/admin/users?page=1&limit=20&search=&status=ACTIVE&role=admin",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users"],
               "query": [
                 {
                   "key": "page",
@@ -1212,14 +1105,9 @@
               "raw": "{\n  \"username\": \"newadmin\",\n  \"email\": \"newadmin@company.com\",\n  \"password\": \"SecurePassword123\",\n  \"first_name\": \"New\",\n  \"last_name\": \"Admin\",\n  \"role\": \"admin\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/users",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users"
-              ]
+              "raw": "{{base_url}}/api/v1/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users"]
             },
             "description": "Create a new admin user.\n\n**Authentication:** Required (super_admin only)\n\n**Request Body:**\n- `username` (string, 3-50 chars, alphanumeric): Unique username\n- `email` (string): Valid email address\n- `password` (string, 8+ chars): Password with uppercase, lowercase, numbers\n- `first_name` (string): First name\n- `last_name` (string): Last name\n- `role` (string): User role (super_admin/admin only)\n\n**Response:** 201 Created with new user details"
           },
@@ -1285,15 +1173,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users/{{user_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "{{user_id}}"
-              ]
+              "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "{{user_id}}"]
             },
             "description": "Get specific admin user profile.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `user_id` (UUID): User ID to retrieve\n\n**Response:** 200 OK with user details"
           },
@@ -1342,15 +1224,9 @@
               "raw": "{\n  \"email\": \"updated@company.com\",\n  \"first_name\": \"Updated\",\n  \"status\": \"ACTIVE\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/users/{{user_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "{{user_id}}"
-              ]
+              "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "{{user_id}}"]
             },
             "description": "Update admin user information (partial update).\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `user_id` (UUID): User ID to update\n\n**Request Body (all optional):**\n- `email` (string): New email address\n- `first_name` (string): New first name\n- `last_name` (string): New last name\n- `password` (string, 8+ chars): New password\n- `status` (string): Status (ACTIVE/INACTIVE)\n- `role` (string): Role (super_admin/admin - cannot be changed to viewer)\n\n**Response:** 200 OK with updated user details"
           },
@@ -1390,15 +1266,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users/{{user_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "{{user_id}}"
-              ]
+              "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "{{user_id}}"]
             },
             "description": "Delete (soft delete) an admin user.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `user_id` (UUID): User ID to delete\n\n**Note:** This performs a soft delete - user record is preserved with deletion timestamp for audit trail.\n\n**Response:** 200 OK with success message"
           },
@@ -1453,15 +1323,9 @@
               "raw": "{\n  \"employee_id\": \"{{employee_id}}\",\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"device_os\": \"android\",\n  \"device_name\": \"Samsung Galaxy S23\",\n  \"push_notification_token\": \"exampleFCMToken1234567890abcdefghijklmnop\",\n  \"notification_platform\": \"fcm\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/mobile/devices/register",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "mobile",
-                "devices",
-                "register"
-              ]
+              "raw": "{{base_url}}/api/v1/mobile/devices/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "register"]
             },
             "description": "Register a new mobile device with push notification token for Firebase Cloud Messaging (FCM) or Apple Push Notification Service (APNS).\n\n**Request Parameters:**\n- `employee_id` (UUID): Unique employee identifier\n- `device_identifier` (string): Unique device identifier (IMEI, serial number, or UUID)\n- `device_os` (enum): Operating system - \"android\" or \"ios\"\n- `device_name` (string, optional): Display name for the device\n- `push_notification_token` (string): Firebase or APNS token\n- `notification_platform` (enum): \"fcm\" (Android) or \"apns\" (iOS)\n\n**Response:** 201 Created with device details"
           },
@@ -1511,16 +1375,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/mobile/devices/{{device_identifier}}/status",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "mobile",
-                "devices",
-                "{{device_identifier}}",
-                "status"
-              ]
+              "raw": "{{base_url}}/api/v1/mobile/devices/{{device_identifier}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "{{device_identifier}}", "status"]
             },
             "description": "Retrieve the current device status and user details. Call this endpoint when the app opens to display current camera status and user information.\n\n**URL Parameters:**\n- `deviceIdentifier` (path): Unique device identifier (same as used in registration)\n\n**Response:** 200 OK with device status and user details"
           },
@@ -1570,16 +1427,9 @@
               "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/mobile/devices/uninstall/otp-request",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "mobile",
-                "devices",
-                "uninstall",
-                "otp-request"
-              ]
+              "raw": "{{base_url}}/api/v1/mobile/devices/uninstall/otp-request",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "uninstall", "otp-request"]
             },
             "description": "Request a One-Time Password (OTP) for device uninstallation. This is part of the employee offboarding flow when an employee leaves the organization.\n\n**OTP Specifications:**\n- Length: 8 digits\n- Validity: 5 minutes\n- Max Attempts: 3 per OTP\n- Purpose: Device uninstallation verification\n\n**Request Parameters:**\n- `device_identifier` (string): Unique device identifier (same as registration)\n\n**Response:** 200 OK with OTP confirmation\n\n**Security Note:** In production, OTP is sent via SMS/Email. In development, it's included in the response for testing."
           },
@@ -1629,19 +1479,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"otp_code\": \"12345678\"\n}"
+              "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"otp_code\": \"{{otp_code}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/mobile/devices/uninstall/otp-validate",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "mobile",
-                "devices",
-                "uninstall",
-                "otp-validate"
-              ]
+              "raw": "{{base_url}}/api/v1/mobile/devices/uninstall/otp-validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "uninstall", "otp-validate"]
             },
             "description": "Validate the OTP received by the user and authorize device uninstallation. Upon successful validation, the device status is set to \"inactive\" and marked for removal.\n\n**Validation Constraints:**\n- OTP Length: Exactly 8 digits\n- OTP Validity: 5 minutes from generation\n- Attempt Limit: 3 attempts maximum\n- OTP Format: Numeric only\n\n**Request Parameters:**\n- `device_identifier` (string): Unique device identifier\n- `otp_code` (string): 8-digit OTP code received by user\n\n**Response:** 200 OK when OTP is verified"
           },
