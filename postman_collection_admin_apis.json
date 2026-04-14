@@ -35,8 +35,24 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "admin", "login"]
             },
-            "description": "Authenticate as admin user and receive JWT access token.\n\n**Request Body:**\n- `username` (string, 3-50 chars): Admin username\n- `password` (string, 6+ chars): Admin password\n\n**Response:** 200 OK with access & refresh tokens\n\n**Note:** Store the token from response and use in Authorization header for subsequent requests."
+            "description": "Authenticate as admin user and receive JWT access token.\n\n**Request Body:**\n- `username` (string, 3-50 chars): Admin username\n- `password` (string, 6+ chars): Admin password\n\n**Response:** 200 OK with access & refresh tokens\n\n**Note:** Token is auto-captured into `access_token` and `refresh_token` collection variables by the Tests script."
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "    pm.test('Login successful - tokens captured', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
           "response": [
             {
               "name": "Success - Logged In",
@@ -61,7 +77,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Admin login successful\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"username\": \"admin\",\n      \"email\": \"admin@company.com\",\n      \"first_name\": \"Admin\",\n      \"last_name\": \"User\",\n      \"role\": \"super_admin\"\n    },\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Admin login successful\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"username\": \"admin\",\n      \"email\": \"admin@company.com\",\n      \"first_name\": \"Admin\",\n      \"last_name\": \"User\",\n      \"role\": \"super_admin\"\n    },\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
             },
             {
               "name": "Error - Invalid Credentials",
@@ -108,15 +124,31 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/refresh",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "refresh"]
             },
-            "description": "Refresh JWT access token using refresh token.\n\n**Request Body:**\n- `refresh_token` (string): Valid refresh token from login\n\n**Response:** 200 OK with new access token"
+            "description": "Refresh JWT access token using refresh token.\n\n**Request Body:**\n- `refreshToken` (string): Valid refresh token from login (auto-populated from `refresh_token` collection variable)\n\n**Response:** 200 OK with new access & refresh tokens"
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "    pm.test('Token refreshed - new tokens captured', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
           "response": [
             {
               "name": "Success - Token Refreshed",
@@ -137,7 +169,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Token refreshed successfully\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Token refreshed successfully\",\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
             }
           ]
         },
