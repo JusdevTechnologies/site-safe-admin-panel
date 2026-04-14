@@ -105,7 +105,9 @@ class DeviceService {
     const previousStatus = device.camera_blocked;
     await device.update({ camera_blocked: cameraBlocked });
 
-    logger.info(`Device camera status updated: ${device.id} (${previousStatus} -> ${cameraBlocked})`);
+    logger.info(
+      `Device camera status updated: ${device.id} (${previousStatus} -> ${cameraBlocked})`,
+    );
 
     return this.formatDevice(device);
   }
@@ -157,15 +159,19 @@ class DeviceService {
       cameraBlocked: device.camera_blocked,
       lastSync: device.last_sync,
       deviceInfo: device.device_info,
-      employee: device.Employee ? {
-        id: device.Employee.id,
-        employeeId: device.Employee.employee_id,
-        user: device.Employee.User ? {
-          id: device.Employee.User.id,
-          username: device.Employee.User.username,
-          email: device.Employee.User.email,
-        } : null,
-      } : null,
+      employee: device.Employee
+        ? {
+            id: device.Employee.id,
+            employeeId: device.Employee.employee_id,
+            user: device.Employee.User
+              ? {
+                  id: device.Employee.User.id,
+                  username: device.Employee.User.username,
+                  email: device.Employee.User.email,
+                }
+              : null,
+          }
+        : null,
       createdAt: device.created_at,
       updatedAt: device.updated_at,
     };

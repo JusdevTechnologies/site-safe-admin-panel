@@ -138,24 +138,26 @@ class EmployeeService {
       id: employee.id,
       employeeId: employee.employee_id,
       userId: employee.user_id,
-      user: employee.User ? {
-        id: employee.User.id,
-        username: employee.User.username,
-        email: employee.User.email,
-        firstName: employee.User.first_name,
-        lastName: employee.User.last_name,
-      } : null,
+      user: employee.User
+        ? {
+            id: employee.User.id,
+            username: employee.User.username,
+            email: employee.User.email,
+            firstName: employee.User.first_name,
+            lastName: employee.User.last_name,
+          }
+        : null,
       department: employee.department,
       deviceOs: employee.device_os,
       status: employee.status,
       devices: employee.Devices
         ? employee.Devices.map((device) => ({
-          id: device.id,
-          identifier: device.device_identifier,
-          name: device.device_name,
-          os: device.device_os,
-          cameraBl locked: device.camera_blocked,
-        }))
+            id: device.id,
+            identifier: device.device_identifier,
+            name: device.device_name,
+            os: device.device_os,
+            cameraBlocked: device.camera_blocked,
+          }))
         : [],
       createdAt: employee.created_at,
       updatedAt: employee.updated_at,
