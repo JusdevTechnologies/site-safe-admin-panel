@@ -7,9 +7,10 @@ const MobileController = require('../controllers/MobileController');
  * Mobile App Routes
  * All routes are public (no authentication) for mobile app flow
  *
- * POST   /api/v1/mobile/devices/register                    - Register device
+ * POST   /api/v1/mobile/devices/register                    - Register device with FCM token
  * GET    /api/v1/mobile/devices/:deviceIdentifier/status    - Get device status
- * POST   /api/v1/mobile/devices/uninstall/otp-request       - Request OTP
+ * POST   /api/v1/mobile/devices/punch                       - Record punch-in / punch-out
+ * POST   /api/v1/mobile/devices/uninstall/otp-request       - Request OTP (delivered via FCM push)
  * POST   /api/v1/mobile/devices/uninstall/otp-validate      - Validate OTP
  */
 
@@ -41,6 +42,21 @@ router.post('/devices/register', MobileController.registerDevice);
 router.get('/devices/:deviceIdentifier/status', MobileController.getDeviceStatus);
 
 /**
+ * @route POST /api/v1/mobile/devices/punch
+ * @description Record a punch-in or punch-out for the device's employee.
+ *              Persists a PunchRecord and sends an FCM confirmation notification.
+ * @access Public (Mobile App)
+ * @body {
+ *   "device_identifier": "string (unique)",
+ *   "punch_type": "punch_in|punch_out",
+ *   "location": "string (optional)",
+ *   "external_id": "string (optional)"
+ * }
+ * @response 201 - Punch recorded with notification dispatched
+ */
+router.post('/devices/punch', MobileController.recordPunch);
+
+/**
  * @route POST /api/v1/mobile/devices/uninstall/otp-request
  * @description Request OTP for device uninstallation
  * @access Public (Mobile App)
@@ -61,9 +77,6 @@ router.post('/devices/uninstall/otp-request', MobileController.requestUninstallO
  * }
  * @response 200 - OTP validated, device uninstallation authorized
  */
-router.post(
-  '/devices/uninstall/otp-validate',
-  MobileController.validateUninstallOTP,
-);
+router.post('/devices/uninstall/otp-validate', MobileController.validateUninstallOTP);
 
 module.exports = router;

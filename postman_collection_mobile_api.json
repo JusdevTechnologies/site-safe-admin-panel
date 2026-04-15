@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "mobile-api-collection-site-safe",
-    "name": "Site Safe Admin Panel - Mobile APIs",
-    "description": "Mobile app flow APIs for device registration, status monitoring, and OTP-based device uninstallation.\n\n**API Base URL**: {{base_url}}/api/v1/mobile\n\n**Flows Covered**:\n1. Device Registration with Push Notifications\n2. Device Status Monitoring\n3. OTP Request for Uninstallation\n4. OTP Validation and Device Uninstallation",
+    "_postman_id": "mobile-api-collection-site-safe-v2",
+    "name": "Site Safe Admin Panel - Mobile APIs (Firebase FCM)",
+    "description": "Mobile app APIs for device registration (FCM), status monitoring, punch-in/out recording, and OTP-based device uninstallation.\n\nAll notifications are delivered via Firebase Cloud Messaging (FCM). Both Android and iOS register an FCM token during device registration.\n\n**API Base URL**: {{base_url}}/api/v1/mobile\n\n**Flows Covered**:\n1. Device Registration with FCM Token\n2. Device Status Monitoring\n3. Punch-In / Punch-Out Recording (with FCM confirmation)\n4. OTP Request for Uninstallation (delivered via FCM push)\n5. OTP Validation and Device Uninstallation",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -14,86 +14,80 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"employee_id\": \"{{employee_id}}\",\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"device_os\": \"android\",\n  \"device_name\": \"Samsung Galaxy S23\",\n  \"push_notification_token\": \"exampleFCMToken1234567890abcdefghijklmnop\",\n  \"notification_platform\": \"fcm\"\n}"
+              "raw": "{\n  \"employee_id\": \"{{employee_id}}\",\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"device_os\": \"android\",\n  \"device_name\": \"Samsung Galaxy S23\",\n  \"push_notification_token\": \"{{fcm_token}}\",\n  \"notification_platform\": \"fcm\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/mobile/devices/register",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "mobile",
-                "devices",
-                "register"
-              ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "register"]
             },
-            "description": "Register a new mobile device with push notification token for Firebase Cloud Messaging (FCM) or Apple Push Notification Service (APNS).\n\n**Request Parameters:**\n- `employee_id` (UUID): Unique employee identifier\n- `device_identifier` (string): Unique device identifier (IMEI, serial number, or UUID)\n- `device_os` (enum): Operating system - \"android\" or \"ios\"\n- `device_name` (string, optional): Display name for the device\n- `push_notification_token` (string): Firebase or APNS token\n- `notification_platform` (enum): \"fcm\" (Android) or \"apns\" (iOS)\n\n**Response:** 201 Created with device details"
+            "description": "Register a new mobile device and store its Firebase FCM registration token. Called once after app install, and again whenever the FCM token is refreshed.\n\n**Both Android and iOS use `notification_platform: \"fcm\"`** — Firebase handles the APNs passthrough for iOS automatically.\n\n**Request Parameters:**\n- `employee_id` (UUID, required): Employee UUID from the database\n- `device_identifier` (string, required): Unique hardware ID (IMEI, serial number, or UUID). Min 5 chars.\n- `device_os` (enum, required): `\"android\"` or `\"ios\"`\n- `device_name` (string, optional): Display name for the device\n- `push_notification_token` (string, required): Firebase FCM registration token obtained from Firebase SDK\n- `notification_platform` (enum, required): `\"fcm\"` for both Android and iOS\n\n**Response:** 201 Created with device details and camera status"
           },
           "response": [
             {
-              "name": "Success - Device Registered",
+              "name": "201 - Device Registered (Android)",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"employee_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n  \"device_os\": \"android\",\n  \"device_name\": \"Samsung Galaxy S23\",\n  \"push_notification_token\": \"exampleFCMToken1234567890abcdefghijklmnop\",\n  \"notification_platform\": \"fcm\"\n}"
+                  "raw": "{\n  \"employee_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"device_os\": \"android\",\n  \"device_name\": \"Samsung Galaxy S23\",\n  \"push_notification_token\": \"dGhpcyBpcyBhbiBleGFtcGxlIEZDTSB0b2tlbg\",\n  \"notification_platform\": \"fcm\"\n}"
                 }
               },
               "status": "Created",
               "code": 201,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Device registered successfully\",\n  \"data\": {\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n    \"device_os\": \"android\",\n    \"device_name\": \"Samsung Galaxy S23\",\n    \"status\": \"active\",\n    \"camera_blocked\": false,\n    \"employee_id\": \"EMP001\",\n    \"user\": {\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\",\n      \"email\": \"john.doe@company.com\"\n    },\n    \"timestamp\": \"2026-04-14T10:30:45.123Z\"\n  }\n}"
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device registered successfully\",\n  \"data\": {\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n    \"device_os\": \"android\",\n    \"device_name\": \"Samsung Galaxy S23\",\n    \"status\": \"active\",\n    \"camera_blocked\": false,\n    \"employee_id\": \"EMP001\",\n    \"user\": {\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\",\n      \"email\": \"john.doe@company.com\"\n    },\n    \"timestamp\": \"2026-04-15T10:30:45.123Z\"\n  }\n}"
             },
             {
-              "name": "Error - Invalid Employee",
+              "name": "201 - Device Registered (iOS)",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"employee_id\": \"invalid-uuid\",\n  \"device_identifier\": \"device123\",\n  \"device_os\": \"android\",\n  \"push_notification_token\": \"token123\",\n  \"notification_platform\": \"fcm\"\n}"
+                  "raw": "{\n  \"employee_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"device_identifier\": \"APPLE_UUID_ABCDEF1234567890\",\n  \"device_os\": \"ios\",\n  \"device_name\": \"iPhone 15 Pro\",\n  \"push_notification_token\": \"dGhpcyBpcyBhbiBleGFtcGxlIEZDTSB0b2tlbg\",\n  \"notification_platform\": \"fcm\"\n}"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device registered successfully\",\n  \"data\": {\n    \"device_id\": \"770e8400-e29b-41d4-a716-446655440002\",\n    \"device_identifier\": \"APPLE_UUID_ABCDEF1234567890\",\n    \"device_os\": \"ios\",\n    \"device_name\": \"iPhone 15 Pro\",\n    \"status\": \"active\",\n    \"camera_blocked\": false,\n    \"employee_id\": \"EMP002\",\n    \"user\": {\n      \"first_name\": \"Jane\",\n      \"last_name\": \"Smith\",\n      \"email\": \"jane.smith@company.com\"\n    },\n    \"timestamp\": \"2026-04-15T10:31:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "404 - Employee Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employee_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"device_identifier\": \"DEVICE_123\",\n  \"device_os\": \"android\",\n  \"push_notification_token\": \"token123\",\n  \"notification_platform\": \"fcm\"\n}"
                 }
               },
               "status": "Not Found",
               "code": 404,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Employee not found. Please verify your employee ID.\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
+            },
+            {
+              "name": "400 - Validation Error (Missing FCM Token)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employee_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"device_identifier\": \"DEVICE_123\",\n  \"device_os\": \"android\"\n}"
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Push notification token is required\",\n    \"code\": \"VALIDATION_ERROR\",\n    \"statusCode\": 400\n  }\n}"
             }
           ]
         }
@@ -106,89 +100,140 @@
           "name": "Get Device Status",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
             "url": {
               "raw": "{{base_url}}/api/v1/mobile/devices/{{device_identifier}}/status",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "mobile",
-                "devices",
-                "{{device_identifier}}",
-                "status"
-              ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "{{device_identifier}}", "status"]
             },
-            "description": "Retrieve the current device status and user details. Call this endpoint when the app opens to display current camera status and user information.\n\n**URL Parameters:**\n- `deviceIdentifier` (path): Unique device identifier (same as used in registration)\n\n**Response:** 200 OK with device status and user details"
+            "description": "Retrieve the current device status and employee details. Call this on every app foreground to sync camera policy and user information.\n\n**URL Parameters:**\n- `deviceIdentifier` (path, required): Unique device identifier used during registration\n\n**Response:** 200 OK with device status (including `camera_blocked`) and user info"
           },
           "response": [
             {
-              "name": "Success - Device Status Retrieved",
+              "name": "200 - Device Status Retrieved",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/mobile/devices/EMULATOR_IMEI_123456789/status",
-                  "host": [
-                    "{{base_url}}"
-                  ],
+                  "raw": "{{base_url}}/api/v1/mobile/devices/SAMSUNG_IMEI_123456789012345/status",
+                  "host": ["{{base_url}}"],
                   "path": [
                     "api",
                     "v1",
                     "mobile",
                     "devices",
-                    "EMULATOR_IMEI_123456789",
+                    "SAMSUNG_IMEI_123456789012345",
                     "status"
                   ]
                 }
               },
               "status": "OK",
               "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Device status retrieved successfully\",\n  \"data\": {\n    \"device\": {\n      \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n      \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n      \"device_os\": \"android\",\n      \"device_name\": \"Samsung Galaxy S23\",\n      \"status\": \"active\",\n      \"camera_blocked\": true,\n      \"last_sync\": \"2026-04-14T10:25:30.000Z\"\n    },\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\",\n      \"email\": \"john.doe@company.com\",\n      \"employee_id\": \"EMP001\",\n      \"department\": \"Engineering\"\n    },\n    \"timestamp\": \"2026-04-14T10:30:45.123Z\"\n  }\n}"
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Device status retrieved successfully\",\n  \"data\": {\n    \"device\": {\n      \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n      \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n      \"device_os\": \"android\",\n      \"device_name\": \"Samsung Galaxy S23\",\n      \"status\": \"active\",\n      \"camera_blocked\": true,\n      \"last_sync\": \"2026-04-15T10:25:30.000Z\"\n    },\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\",\n      \"email\": \"john.doe@company.com\",\n      \"employee_id\": \"EMP001\",\n      \"department\": \"Engineering\"\n    },\n    \"timestamp\": \"2026-04-15T10:30:45.123Z\"\n  }\n}"
             },
             {
-              "name": "Error - Device Not Found",
+              "name": "404 - Device Not Found",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/mobile/devices/invalid_device/status",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "mobile",
-                    "devices",
-                    "invalid_device",
-                    "status"
-                  ]
+                  "raw": "{{base_url}}/api/v1/mobile/devices/UNKNOWN_DEVICE/status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "mobile", "devices", "UNKNOWN_DEVICE", "status"]
                 }
               },
               "status": "Not Found",
               "code": 404,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Device not found. Please register your device first.\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Punch-In / Punch-Out",
+      "item": [
+        {
+          "name": "Record Punch-In",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"punch_type\": \"punch_in\",\n  \"location\": \"Main Entrance - Gate A\",\n  \"external_id\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/mobile/devices/punch",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "punch"]
+            },
+            "description": "Record a punch-in or punch-out event for the employee associated with the device. A `PunchRecord` is persisted and an FCM confirmation notification is dispatched to the device.\n\n**Request Parameters:**\n- `device_identifier` (string, required): Unique device identifier\n- `punch_type` (enum, required): `\"punch_in\"` or `\"punch_out\"`\n- `location` (string, optional): Site / gate label (e.g., `\"Main Entrance - Gate A\"`)\n- `external_id` (string, optional): Reference ID from the access management system\n\n**Response:** 201 Created with punch record details\n\n**FCM Notification Sent:** \"Punch-In Recorded\" or \"Punch-Out Recorded\" confirmation pushed to device"
+          },
+          "response": [
+            {
+              "name": "201 - Punch-In Recorded",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"punch_type\": \"punch_in\",\n  \"location\": \"Main Entrance - Gate A\"\n}"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Punch recorded successfully\",\n  \"data\": {\n    \"punch_record_id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"punch_type\": \"punch_in\",\n    \"timestamp\": \"2026-04-15T09:00:00.000Z\",\n    \"location\": \"Main Entrance - Gate A\",\n    \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n    \"employee\": {\n      \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n      \"employee_id\": \"EMP001\",\n      \"name\": \"John Doe\"\n    }\n  }\n}"
+            },
+            {
+              "name": "201 - Punch-Out Recorded",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"punch_type\": \"punch_out\",\n  \"location\": \"Main Exit - Gate B\"\n}"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Punch recorded successfully\",\n  \"data\": {\n    \"punch_record_id\": \"990e8400-e29b-41d4-a716-446655440005\",\n    \"punch_type\": \"punch_out\",\n    \"timestamp\": \"2026-04-15T18:00:00.000Z\",\n    \"location\": \"Main Exit - Gate B\",\n    \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n    \"employee\": {\n      \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n      \"employee_id\": \"EMP001\",\n      \"name\": \"John Doe\"\n    }\n  }\n}"
+            },
+            {
+              "name": "404 - Device Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_identifier\": \"UNKNOWN_DEVICE\",\n  \"punch_type\": \"punch_in\"\n}"
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Device not found. Please register your device first.\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
+            },
+            {
+              "name": "400 - Validation Error (Invalid punch_type)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"punch_type\": \"invalid_type\"\n}"
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"punch_type must be either \\\"punch_in\\\" or \\\"punch_out\\\"\",\n    \"code\": \"VALIDATION_ERROR\",\n    \"statusCode\": 400\n  }\n}"
             }
           ]
         }
@@ -202,16 +247,8 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
@@ -219,69 +256,55 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/mobile/devices/uninstall/otp-request",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "mobile",
-                "devices",
-                "uninstall",
-                "otp-request"
-              ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "uninstall", "otp-request"]
             },
-            "description": "Request a One-Time Password (OTP) for device uninstallation. This is part of the super admin flow when an employee leaves the organization.\n\n**OTP Specifications:**\n- Length: 8 digits\n- Validity: 5 minutes\n- Max Attempts: 3 per OTP\n- Purpose: Device uninstallation verification\n\n**Request Parameters:**\n- `device_identifier` (string): Unique device identifier (same as registration)\n\n**Response:** 200 OK with OTP confirmation\n\n**Security Note:** In production, OTP is sent via SMS/Email. In development, it's included in the response for testing."
+            "description": "Request an 8-digit OTP for device uninstallation. The OTP is delivered directly to the device via **Firebase push notification** (data payload). Any previously valid OTP for this device is immediately invalidated.\n\n**OTP Specifications:**\n- Length: 8 digits\n- Validity: 5 minutes\n- Max Attempts: 3 per OTP\n- Delivery: FCM push notification (data payload includes `otp_code`)\n\n**Request Parameters:**\n- `device_identifier` (string, required): Unique device identifier\n\n**Response:** 200 OK — includes `push_status` (`\"delivered\"`, `\"failed\"`, or `\"skipped\"`)\n\n**Development only:** `otp_for_testing` is included in the response when `NODE_ENV=development`"
           },
           "response": [
             {
-              "name": "Success - OTP Sent",
+              "name": "200 - OTP Sent via FCM Push",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\"\n}"
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\"\n}"
                 }
               },
               "status": "OK",
               "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"OTP request processed successfully\",\n  \"data\": {\n    \"status\": \"otp_sent\",\n    \"message\": \"OTP has been sent to your registered email/SMS\",\n    \"expires_in_minutes\": 5,\n    \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n    \"otp_for_testing\": \"12345678\"\n  }\n}"
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP request processed successfully\",\n  \"data\": {\n    \"status\": \"otp_sent\",\n    \"message\": \"OTP has been sent to your registered device via push notification\",\n    \"expires_in_minutes\": 5,\n    \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n    \"push_status\": \"delivered\",\n    \"otp_for_testing\": \"12345678\"\n  }\n}"
             },
             {
-              "name": "Error - Device Not Found",
+              "name": "200 - OTP Sent (FCM Push Failed — still valid)",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"device_identifier\": \"invalid_device\"\n}"
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP request processed successfully\",\n  \"data\": {\n    \"status\": \"otp_sent\",\n    \"message\": \"OTP has been sent to your registered device via push notification\",\n    \"expires_in_minutes\": 5,\n    \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n    \"push_status\": \"failed\",\n    \"otp_for_testing\": \"12345678\"\n  }\n}"
+            },
+            {
+              "name": "404 - Device Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_identifier\": \"UNKNOWN_DEVICE\"\n}"
                 }
               },
               "status": "Not Found",
               "code": 404,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Device not found. Please register your device first.\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
             }
           ]
@@ -291,136 +314,79 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"otp_code\": \"12345678\"\n}"
+              "raw": "{\n  \"device_identifier\": \"{{device_identifier}}\",\n  \"otp_code\": \"{{otp_code}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/mobile/devices/uninstall/otp-validate",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "mobile",
-                "devices",
-                "uninstall",
-                "otp-validate"
-              ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "mobile", "devices", "uninstall", "otp-validate"]
             },
-            "description": "Validate the OTP received by the user and authorize device uninstallation. Upon successful validation, the device status is set to \"inactive\" and marked for removal.\n\n**Validation Constraints:**\n- OTP Length: Exactly 8 digits\n- OTP Validity: 5 minutes from generation\n- Attempt Limit: 3 attempts maximum\n- OTP Format: Numeric only\n\n**Request Parameters:**\n- `device_identifier` (string): Unique device identifier\n- `otp_code` (string): 8-digit OTP code received by user\n\n**Response:** 200 OK when OTP is verified"
+            "description": "Validate the OTP received on the device and authorize uninstallation. On success, the device status is set to `\"inactive\"`.\n\n**Validation Constraints:**\n- OTP Length: Exactly 8 digits\n- OTP Validity: 5 minutes from generation\n- Attempt Limit: 3 attempts maximum\n- OTP Format: Digits only\n\n**Request Parameters:**\n- `device_identifier` (string, required): Unique device identifier\n- `otp_code` (string, required): 8-digit OTP received via FCM push\n\n**Response:** 200 OK when OTP is verified and device is authorised for uninstallation"
           },
           "response": [
             {
-              "name": "Success - OTP Verified",
+              "name": "200 - OTP Verified",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n  \"otp_code\": \"12345678\"\n}"
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"otp_code\": \"12345678\"\n}"
                 }
               },
               "status": "OK",
               "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"OTP validated successfully\",\n  \"data\": {\n    \"status\": \"otp_verified\",\n    \"message\": \"OTP verified successfully. Device uninstallation authorized.\",\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n    \"timestamp\": \"2026-04-14T10:30:45.123Z\"\n  }\n}"
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP validated successfully\",\n  \"data\": {\n    \"status\": \"otp_verified\",\n    \"message\": \"OTP verified successfully. Device uninstallation authorized.\",\n    \"device_id\": \"660e8400-e29b-41d4-a716-446655440001\",\n    \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n    \"timestamp\": \"2026-04-15T10:30:45.123Z\"\n  }\n}"
             },
             {
-              "name": "Error - Invalid OTP",
+              "name": "401 - Invalid OTP",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n  \"otp_code\": \"00000000\"\n}"
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"otp_code\": \"00000000\"\n}"
                 }
               },
               "status": "Unauthorized",
               "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Invalid OTP. 2 attempts remaining.\",\n    \"code\": \"UNAUTHORIZED\",\n    \"statusCode\": 401\n  }\n}"
             },
             {
-              "name": "Error - OTP Expired",
+              "name": "401 - OTP Expired",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n  \"otp_code\": \"12345678\"\n}"
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"otp_code\": \"12345678\"\n}"
                 }
               },
               "status": "Unauthorized",
               "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"OTP has expired. Please request a new one.\",\n    \"code\": \"UNAUTHORIZED\",\n    \"statusCode\": 401\n  }\n}"
             },
             {
-              "name": "Error - Max Attempts Exceeded",
+              "name": "401 - Max Attempts Exceeded",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"device_identifier\": \"EMULATOR_IMEI_123456789\",\n  \"otp_code\": \"00000000\"\n}"
+                  "raw": "{\n  \"device_identifier\": \"SAMSUNG_IMEI_123456789012345\",\n  \"otp_code\": \"00000000\"\n}"
                 }
               },
               "status": "Unauthorized",
               "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Maximum OTP verification attempts exceeded. Please request a new OTP.\",\n    \"code\": \"UNAUTHORIZED\",\n    \"statusCode\": 401\n  }\n}"
             }
           ]
@@ -433,25 +399,31 @@
       "key": "base_url",
       "value": "http://localhost:3000",
       "type": "string",
-      "description": "Base URL of the backend server. Update for production, staging, or different ports."
+      "description": "Base URL of the backend server. Update for staging (https://api-staging.example.com) or production."
     },
     {
       "key": "employee_id",
       "value": "550e8400-e29b-41d4-a716-446655440000",
       "type": "string",
-      "description": "Employee UUID from database. Get from: SELECT id FROM employees LIMIT 1;"
+      "description": "Employee UUID from the database. Retrieve with: SELECT id FROM employees LIMIT 1;"
     },
     {
       "key": "device_identifier",
-      "value": "EMULATOR_IMEI_123456789",
+      "value": "SAMSUNG_IMEI_123456789012345",
       "type": "string",
-      "description": "Unique device identifier (IMEI, serial number, or UUID). Must be unique per device."
+      "description": "Unique device identifier (IMEI, serial number, or UUID). Must match the value used at registration."
+    },
+    {
+      "key": "fcm_token",
+      "value": "dGhpcyBpcyBhbiBleGFtcGxlIEZDTSB0b2tlbg",
+      "type": "string",
+      "description": "Firebase FCM registration token. Obtained from the Firebase SDK in the mobile app (both Android and iOS)."
     },
     {
       "key": "otp_code",
       "value": "12345678",
       "type": "string",
-      "description": "8-digit OTP code. Get from OTP request response in development mode."
+      "description": "8-digit OTP received via FCM push notification on the device."
     }
   ]
 }

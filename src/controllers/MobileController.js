@@ -20,9 +20,7 @@ class MobileController {
       // Call service
       const result = await MobileService.registerDevice(validatedData);
 
-      res.status(201).json(
-        formatResponse(result, 'Device registered successfully'),
-      );
+      res.status(201).json(formatResponse(result, 'Device registered successfully'));
     } catch (error) {
       logger.error(`Device registration controller error: ${error.message}`);
       next(error);
@@ -43,9 +41,7 @@ class MobileController {
       // Call service
       const result = await MobileService.getDeviceStatus(deviceIdentifier);
 
-      res.status(200).json(
-        formatResponse(result, 'Device status retrieved successfully'),
-      );
+      res.status(200).json(formatResponse(result, 'Device status retrieved successfully'));
     } catch (error) {
       logger.error(`Get device status controller error: ${error.message}`);
       next(error);
@@ -62,13 +58,9 @@ class MobileController {
       const validatedData = MobileValidator.validateOTPRequest(req.body);
 
       // Call service
-      const result = await MobileService.requestUninstallOTP(
-        validatedData.device_identifier,
-      );
+      const result = await MobileService.requestUninstallOTP(validatedData.device_identifier);
 
-      res.status(200).json(
-        formatResponse(result, 'OTP request processed successfully'),
-      );
+      res.status(200).json(formatResponse(result, 'OTP request processed successfully'));
     } catch (error) {
       logger.error(`OTP request controller error: ${error.message}`);
       next(error);
@@ -90,11 +82,30 @@ class MobileController {
         validatedData.otp_code,
       );
 
-      res.status(200).json(
-        formatResponse(result, 'OTP validated successfully'),
-      );
+      res.status(200).json(formatResponse(result, 'OTP validated successfully'));
     } catch (error) {
       logger.error(`OTP validation controller error: ${error.message}`);
+      next(error);
+    }
+  }
+  /**
+   * POST /api/v1/mobile/devices/punch
+   * Record a punch-in or punch-out event
+   */
+  async recordPunch(req, res, next) {
+    try {
+      const validatedData = MobileValidator.validatePunchRecord(req.body);
+
+      const result = await MobileService.recordPunch(
+        validatedData.device_identifier,
+        validatedData.punch_type,
+        validatedData.location,
+        validatedData.external_id,
+      );
+
+      res.status(201).json(formatResponse(result, 'Punch recorded successfully'));
+    } catch (error) {
+      logger.error(`Record punch controller error: ${error.message}`);
       next(error);
     }
   }

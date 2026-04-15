@@ -4,6 +4,7 @@ const ConflictError = require('../exceptions/ConflictError');
 const UnauthorizedError = require('../exceptions/UnauthorizedError');
 const logger = require('../utils/logger');
 const { generateRandomOTP, calculateOTPExpiry } = require('../utils/helpers');
+const FirebaseService = require('../integrations/FirebaseService');
 
 /**
  * Mobile App Service
@@ -70,9 +71,7 @@ class MobileService {
           status: 'active',
         });
 
-        logger.info(
-          `Device registration updated: ${device.id} for employee: ${employee_id}`,
-        );
+        logger.info(`Device registration updated: ${device.id} for employee: ${employee_id}`);
       } else {
         // Create new device
         device = await db.Device.create({
@@ -87,9 +86,7 @@ class MobileService {
           camera_blocked: false,
         });
 
-        logger.info(
-          `New device registered: ${device.id} for employee: ${employee_id}`,
-        );
+        logger.info(`New device registered: ${device.id} for employee: ${employee_id}`);
       }
 
       return this.formatDeviceResponse(device, employee);
@@ -208,17 +205,25 @@ class MobileService {
         expires_at: expiresAt,
       });
 
-      logger.info(
-        `OTP requested for device: ${device.id}, OTP expires at: ${expiresAt}`,
-      );
+      logger.info(`OTP requested for device: ${device.id}, OTP expires at: ${expiresAt}`);
 
-      // Return confirmation without revealing OTP (for security)
-      // In production, OTP should be sent via SMS/Email/Push Notification
+      // Deliver OTP via Firebase push notification (non-blocking)
+      let pushStatus = 'skipped';
+      try {
+        const pushResult = await FirebaseService.sendOtpPushNotification(device, otpCode);
+        pushStatus = pushResult.success ? 'delivered' : 'failed';
+      } catch (pushError) {
+        logger.error(`OTP push delivery failed (non-fatal): ${pushError.message}`);
+        pushStatus = 'failed';
+      }
+
+      // Return confirmation — OTP also exposed in development for testing convenience
       return {
         status: 'otp_sent',
-        message: 'OTP has been sent to your registered email/SMS',
+        message: 'OTP has been sent to your registered device via push notification',
         expires_in_minutes: 5,
         device_identifier: deviceIdentifier,
+        push_status: pushStatus,
         otp_for_testing: process.env.NODE_ENV === 'development' ? otpCode : undefined,
       };
     } catch (error) {
@@ -284,9 +289,7 @@ class MobileService {
 
       // Verify OTP code
       if (otp.otp_code !== otpCode) {
-        logger.warn(
-          `Invalid OTP attempt for device: ${device.id}, attempt: ${otp.attempt_count}`,
-        );
+        logger.warn(`Invalid OTP attempt for device: ${device.id}, attempt: ${otp.attempt_count}`);
 
         throw new UnauthorizedError(
           `Invalid OTP. ${otp.max_attempts - otp.attempt_count} attempts remaining.`,
@@ -313,6 +316,82 @@ class MobileService {
       };
     } catch (error) {
       logger.error(`OTP validation error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Record a punch-in or punch-out event for the device's employee
+   * and send an FCM confirmation notification.
+   *
+   * @param {string} deviceIdentifier - Unique device identifier
+   * @param {'punch_in'|'punch_out'} punchType - Punch direction
+   * @param {string|null} location - Optional site / location label
+   * @param {string|null} externalId - Optional external system reference
+   * @returns {Object} - Punch record summary
+   * @throws {NotFoundError} - If device not found
+   * @throws {UnauthorizedError} - If employee is inactive
+   */
+  async recordPunch(deviceIdentifier, punchType, location = null, externalId = null) {
+    try {
+      const device = await db.Device.findOne({
+        where: { device_identifier: deviceIdentifier },
+        include: [
+          {
+            model: db.Employee,
+            include: [db.User],
+          },
+        ],
+      });
+
+      if (!device) {
+        throw new NotFoundError('Device not found. Please register your device first.');
+      }
+
+      if (device.status !== 'active') {
+        throw new UnauthorizedError('Device is not active. Please contact your administrator.');
+      }
+
+      const employee = device.Employee;
+      if (!employee || employee.status !== 'active') {
+        throw new UnauthorizedError('Employee account is not active.');
+      }
+
+      // Create the punch record
+      const punchRecord = await db.PunchRecord.create({
+        employee_id: employee.id,
+        punch_type: punchType,
+        timestamp: new Date(),
+        location: location || null,
+        source_system: 'mobile_app',
+        external_id: externalId || null,
+      });
+
+      logger.info(
+        `Punch recorded: ${punchType} | employee: ${employee.id} | device: ${device.id} | punch_record: ${punchRecord.id}`,
+      );
+
+      // Send FCM confirmation notification (non-blocking — punch is recorded regardless)
+      try {
+        await FirebaseService.sendPunchNotification(device, punchType, location);
+      } catch (notifError) {
+        logger.error(`FCM punch notification failed (non-fatal): ${notifError.message}`);
+      }
+
+      return {
+        punch_record_id: punchRecord.id,
+        punch_type: punchRecord.punch_type,
+        timestamp: punchRecord.timestamp.toISOString(),
+        location: punchRecord.location,
+        device_identifier: deviceIdentifier,
+        employee: {
+          id: employee.id,
+          employee_id: employee.employee_id,
+          name: `${employee.User.first_name} ${employee.User.last_name}`.trim(),
+        },
+      };
+    } catch (error) {
+      logger.error(`Punch recording error: ${error.message}`);
       throw error;
     }
   }

@@ -7,44 +7,36 @@
 │                    React Native Mobile Apps                       │
 │              (Android & iOS - Camera Control)                     │
 └────────────────────┬────────────────────────────────────────────┘
-                     │
-     ┌───────────────┼───────────────┐
-     │               │               │
-     ▼               ▼               ▼
-┌─────────┐  ┌────────────────┐  ┌─────────────┐
-│ Android │  │ Azure Notif.   │  │  MicroMDM   │
-│DM Policy│  │     Hubs       │  │   (iOS)     │
-└─────────┘  └────────────────┘  └─────────────┘
-     │               │               │
-     └───────────────┼───────────────┘
-                     │
-     ┌───────────────▼────────────────┐
-     │  Site Safe Admin Panel Backend  │
-     │     (Express.js Middleware)    │
-     │                                │
-     │  ┌─────────┐  ┌──────────────┐ │
-     │  │ Auth    │  │ Device Mgmt  │ │
-     │  │ (JWT)   │  │              │ │
-     │  └─────────┘  └──────────────┘ │
-     │                                │
-     │  ┌──────────────────────────┐  │
-     │  │  Notification Service    │  │
-     │  │  (Azure Hub Integration) │  │
-     │  └──────────────────────────┘  │
-     │                                │
-     │  ┌──────────────────────────┐  │
-     │  │  Webhook Handler         │  │
-     │  │  (Access Management)     │  │
-     │  └──────────────────────────┘  │
-     └────────────┬─────────────────────┘
-                  │
-     ┌────────────┼─────────────────┐
-     │            │                 │
-     ▼            ▼                 ▼
-┌──────────┐ ┌────────────┐ ┌─────────────┐
-│PostgreSQL│ │ Redis      │ │Access Mgmt  │
-│Database  │ │(Optional)  │ │System API   │
-└──────────┘ └────────────┘ └─────────────┘
+                     │  FCM Token + Device Registration
+                     ▼
+     ┌───────────────────────────────────┐
+     │  Site Safe Admin Panel Backend    │
+     │     (Express.js Middleware)       │
+     │                                   │
+     │  ┌─────────┐  ┌───────────────┐  │
+     │  │ Auth    │  │ Device Mgmt   │  │
+     │  │ (JWT)   │  │               │  │
+     │  └─────────┘  └───────────────┘  │
+     │                                   │
+     │  ┌────────────────────────────┐   │
+     │  │  FirebaseService           │   │
+     │  │  (FCM Push Notifications)  │   │
+     │  └────────────────────────────┘   │
+     │                                   │
+     └──────┬─────────────┬─────────────┘
+            │             │
+     ┌──────▼──────┐  ┌───▼───────────┐
+     │ PostgreSQL  │  │ Firebase FCM  │
+     │ Database    │  │ (Google Cloud)│
+     └─────────────┘  └───────┬───────┘
+                               │  Push
+                    ┌──────────┴──────────┐
+                    ▼                     ▼
+              ┌──────────┐         ┌──────────┐
+              │ Android  │         │   iOS    │
+              │ (FCM)    │         │ (APNs via│
+              │          │         │ Firebase)│
+              └──────────┘         └──────────┘
 ```
 
 ## Layer Architecture
@@ -68,7 +60,7 @@
 - Webhook processing
 
 ### 4. Integration Layer
-- Azure Notification Hubs SDK
+- Firebase Admin SDK (FCM push notifications for Android & iOS)
 - MicroMDM API client
 - Access Management system client
 - External webhook handlers
@@ -102,13 +94,13 @@
    └─> Create PunchRecord
    └─> Determine camera action (lock/unlock)
    
-4. NotificationService sends notification
-   └─> Retrieve employee's device
-   └─> Prepare notification payload
+4. FirebaseService sends push notification
+   └─> Retrieve employee's device (FCM token)
+   └─> Build platform-specific payload
    
-5. Publishing to Azure Notification Hubs
-   ├─> Android: Direct device owner policy
-   └─> iOS: MicroMDM API call
+5. Firebase Cloud Messaging (FCM)
+   ├─> Android: FCM direct delivery
+   └─> iOS: FCM → APNs passthrough
    
 6. Mobile app receives notification
    ├─> Android: Apply camera policy
@@ -269,11 +261,12 @@ User (1) ──────────── (N) AuditLog
 
 ## Integration Points
 
-### Azure Notification Hubs
-- Send platform-specific notifications
-- Handle delivery receipts
-- Manage device registrations
-- Track notification status
+### Firebase Cloud Messaging (FCM)
+- Send push notifications to Android (FCM) and iOS (APNs via Firebase passthrough)
+- Platform-specific notification payloads (channelId for Android, APNs headers for iOS)
+- Handle delivery receipts via FCM message IDs stored in `notification_logs.fcm_message_id`
+- Lazy-initialised Firebase Admin SDK (credentials from environment variables)
+- All notifications are non-blocking: failures are logged but never roll back business operations
 
 ### MicroMDM
 - iOS device management

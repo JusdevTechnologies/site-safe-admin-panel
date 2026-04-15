@@ -13,7 +13,7 @@ const requiredEnvVars = [
 ];
 
 // Check for required environment variables
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
   throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
@@ -52,15 +52,12 @@ module.exports = {
     jwtSecret: process.env.PASSPORT_JWT_SECRET,
   },
 
-  // Azure
-  azure: {
-    notificationHub: {
-      name: process.env.AZURE_NOTIFICATION_HUB_NAME,
-      connectionString: process.env.AZURE_NOTIFICATION_HUB_CONNECTION_STRING,
-    },
-    serviceBus: {
-      connectionString: process.env.AZURE_SERVICE_BUS_CONNECTION_STRING,
-    },
+  // Firebase Cloud Messaging
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    // Private key stored in .env as a single line with literal \n characters
+    privateKey: process.env.FIREBASE_PRIVATE_KEY || '',
   },
 
   // MDM

@@ -3,6 +3,7 @@ const NotFoundError = require('../exceptions/NotFoundError');
 const ConflictError = require('../exceptions/ConflictError');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
+const FirebaseService = require('../integrations/FirebaseService');
 
 class DeviceService {
   /**
@@ -204,6 +205,21 @@ class DeviceService {
 
       logger.info(`Device camera blocked: ${deviceId} by user ${userId}`);
 
+      // Send FCM push notification to device (non-blocking — failure must not roll back the block)
+      try {
+        const adminUser = await db.User.findByPk(userId, {
+          attributes: ['first_name', 'last_name', 'username'],
+        });
+        const adminName = adminUser
+          ? `${adminUser.first_name || ''} ${adminUser.last_name || ''}`.trim() ||
+            adminUser.username
+          : 'Administrator';
+
+        await FirebaseService.sendCameraStatusNotification(device, true, adminName);
+      } catch (notifError) {
+        logger.error(`FCM camera-block notification failed (non-fatal): ${notifError.message}`);
+      }
+
       return this.formatDeviceForAdmin(device);
     } catch (error) {
       logger.error(`Error blocking device camera: ${error.message}`);
@@ -247,6 +263,21 @@ class DeviceService {
       });
 
       logger.info(`Device camera unblocked: ${deviceId} by user ${userId}`);
+
+      // Send FCM push notification to device (non-blocking — failure must not roll back the unblock)
+      try {
+        const adminUser = await db.User.findByPk(userId, {
+          attributes: ['first_name', 'last_name', 'username'],
+        });
+        const adminName = adminUser
+          ? `${adminUser.first_name || ''} ${adminUser.last_name || ''}`.trim() ||
+            adminUser.username
+          : 'Administrator';
+
+        await FirebaseService.sendCameraStatusNotification(device, false, adminName);
+      } catch (notifError) {
+        logger.error(`FCM camera-unblock notification failed (non-fatal): ${notifError.message}`);
+      }
 
       return this.formatDeviceForAdmin(device);
     } catch (error) {

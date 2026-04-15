@@ -35,6 +35,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      fcm_message_id: {
+        type: DataTypes.STRING(512),
+        allowNull: true,
+        comment: 'Firebase Cloud Messaging message ID returned on successful send',
+      },
       retry_count: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
