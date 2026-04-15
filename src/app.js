@@ -41,6 +41,14 @@ app.use(cors(corsOptions));
 // Request logging
 app.use(requestLogger);
 
+// Disable HTTP caching for all API responses
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 // Rate limiting (skip for auth routes, they have their own limiter)
 app.use('/api/v1/', apiLimiter);
 
