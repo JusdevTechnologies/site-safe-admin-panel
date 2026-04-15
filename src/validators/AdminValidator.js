@@ -121,6 +121,67 @@ class AdminValidator {
   }
 
   /**
+   * Validate employee creation request
+   */
+  static createEmployeeSchema() {
+    return Joi.object({
+      employeeId: Joi.string().max(50).required().messages({
+        'string.empty': 'Employee ID is required',
+        'string.max': 'Employee ID must not exceed 50 characters',
+      }),
+      firstName: Joi.string().max(100).required().messages({
+        'string.empty': 'First name is required',
+        'string.max': 'First name must not exceed 100 characters',
+      }),
+      lastName: Joi.string().max(100).optional().allow('', null).messages({
+        'string.max': 'Last name must not exceed 100 characters',
+      }),
+      email: Joi.string().email().optional().allow('', null).messages({
+        'string.email': 'Please provide a valid email address',
+      }),
+      phone: Joi.string().max(30).optional().allow('', null).messages({
+        'string.max': 'Phone must not exceed 30 characters',
+      }),
+      department: Joi.string().max(100).optional().allow('', null).messages({
+        'string.max': 'Department must not exceed 100 characters',
+      }),
+      deviceOs: Joi.string().valid('android', 'ios').required().messages({
+        'any.only': 'Device OS must be android or ios',
+        'any.required': 'Device OS is required',
+      }),
+    }).required();
+  }
+
+  /**
+   * Validate employee update request
+   */
+  static updateEmployeeSchema() {
+    return Joi.object({
+      firstName: Joi.string().max(100).optional().messages({
+        'string.max': 'First name must not exceed 100 characters',
+      }),
+      lastName: Joi.string().max(100).optional().allow('', null).messages({
+        'string.max': 'Last name must not exceed 100 characters',
+      }),
+      email: Joi.string().email().optional().allow('', null).messages({
+        'string.email': 'Please provide a valid email address',
+      }),
+      phone: Joi.string().max(30).optional().allow('', null).messages({
+        'string.max': 'Phone must not exceed 30 characters',
+      }),
+      department: Joi.string().max(100).optional().allow('', null).messages({
+        'string.max': 'Department must not exceed 100 characters',
+      }),
+      deviceOs: Joi.string().valid('android', 'ios').optional().messages({
+        'any.only': 'Device OS must be android or ios',
+      }),
+      status: Joi.string().valid('active', 'inactive').optional().messages({
+        'any.only': 'Status must be active or inactive',
+      }),
+    }).min(1).required();
+  }
+
+  /**
    * Validate pagination and search parameters
    */
   static paginationSchema() {

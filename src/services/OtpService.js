@@ -165,13 +165,7 @@ class OtpService {
             include: [
               {
                 model: db.Employee,
-                attributes: ['id', 'employee_id'],
-                include: [
-                  {
-                    model: db.User,
-                    attributes: ['id', 'username', 'first_name', 'last_name', 'email'],
-                  },
-                ],
+                attributes: ['id', 'employee_id', 'first_name', 'last_name', 'email'],
               },
             ],
           },
@@ -314,14 +308,8 @@ class OtpService {
               ? {
                   id: otp.Device.Employee.id,
                   employeeId: otp.Device.Employee.employee_id,
-                  user: otp.Device.Employee.User
-                    ? {
-                        id: otp.Device.Employee.User.id,
-                        username: otp.Device.Employee.User.username,
-                        name: `${otp.Device.Employee.User.first_name || ''} ${otp.Device.Employee.User.last_name || ''}`.trim(),
-                        email: otp.Device.Employee.User.email,
-                      }
-                    : null,
+                  name: `${otp.Device.Employee.first_name || ''} ${otp.Device.Employee.last_name || ''}`.trim(),
+                  email: otp.Device.Employee.email,
                 }
               : null,
           }

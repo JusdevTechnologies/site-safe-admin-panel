@@ -34,11 +34,14 @@ class EmployeeController {
 
   async createEmployee(req, res, next) {
     try {
-      const { userId, employeeId, department, deviceOs } = req.body;
+      const { employeeId, firstName, lastName, email, phone, department, deviceOs } = req.body;
 
       const employee = await EmployeeService.createEmployee({
-        userId,
         employeeId,
+        firstName,
+        lastName,
+        email,
+        phone,
         department,
         deviceOs,
       });

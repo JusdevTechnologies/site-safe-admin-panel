@@ -18,7 +18,6 @@ class DeviceService {
       include: [
         {
           model: db.Employee,
-          include: [db.User],
         },
       ],
       order: [['created_at', 'DESC']],
@@ -73,13 +72,7 @@ class DeviceService {
         include: [
           {
             model: db.Employee,
-            attributes: ['id', 'employee_id', 'department', 'device_os'],
-            include: [
-              {
-                model: db.User,
-                attributes: ['id', 'username', 'first_name', 'last_name', 'email'],
-              },
-            ],
+            attributes: ['id', 'employee_id', 'first_name', 'last_name', 'email', 'department', 'device_os'],
           },
           {
             model: db.User,
@@ -114,7 +107,6 @@ class DeviceService {
       include: [
         {
           model: db.Employee,
-          include: [db.User],
         },
         {
           model: db.DevicePolicy,
@@ -337,13 +329,9 @@ class DeviceService {
         ? {
             id: device.Employee.id,
             employeeId: device.Employee.employee_id,
-            user: device.Employee.User
-              ? {
-                  id: device.Employee.User.id,
-                  username: device.Employee.User.username,
-                  email: device.Employee.User.email,
-                }
-              : null,
+            firstName: device.Employee.first_name,
+            lastName: device.Employee.last_name,
+            email: device.Employee.email,
           }
         : null,
       createdAt: device.created_at,
@@ -377,15 +365,9 @@ class DeviceService {
             id: device.Employee.id,
             employeeId: device.Employee.employee_id,
             department: device.Employee.department,
-            user: device.Employee.User
-              ? {
-                  id: device.Employee.User.id,
-                  username: device.Employee.User.username,
-                  firstName: device.Employee.User.first_name,
-                  lastName: device.Employee.User.last_name,
-                  email: device.Employee.User.email,
-                }
-              : null,
+            firstName: device.Employee.first_name,
+            lastName: device.Employee.last_name,
+            email: device.Employee.email,
           }
         : null,
       createdAt: device.created_at,

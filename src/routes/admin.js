@@ -10,6 +10,7 @@ const DashboardController = require('../controllers/DashboardController');
 const DeviceController = require('../controllers/DeviceController');
 const UserController = require('../controllers/UserController');
 const OtpController = require('../controllers/OtpController');
+const EmployeeController = require('../controllers/EmployeeController');
 
 // Import validators
 const AdminValidator = require('../validators/AdminValidator');
@@ -251,6 +252,67 @@ router.post(
     }),
   ),
   OtpController.verifyOtp.bind(OtpController),
+);
+
+/**
+ * Employee Management Routes
+ */
+
+/**
+ * Get All Employees
+ * GET /api/v1/admin/employees
+ */
+router.get(
+  '/admin/employees',
+  authenticate,
+  authorize('super_admin'),
+  EmployeeController.getAllEmployees.bind(EmployeeController),
+);
+
+/**
+ * Create Employee
+ * POST /api/v1/admin/employees
+ */
+router.post(
+  '/admin/employees',
+  authenticate,
+  authorize('super_admin'),
+  validateRequest(AdminValidator.createEmployeeSchema()),
+  EmployeeController.createEmployee.bind(EmployeeController),
+);
+
+/**
+ * Get Employee by ID
+ * GET /api/v1/admin/employees/:id
+ */
+router.get(
+  '/admin/employees/:id',
+  authenticate,
+  authorize('super_admin'),
+  EmployeeController.getEmployeeById.bind(EmployeeController),
+);
+
+/**
+ * Update Employee
+ * PATCH /api/v1/admin/employees/:id
+ */
+router.patch(
+  '/admin/employees/:id',
+  authenticate,
+  authorize('super_admin'),
+  validateRequest(AdminValidator.updateEmployeeSchema()),
+  EmployeeController.updateEmployee.bind(EmployeeController),
+);
+
+/**
+ * Delete Employee
+ * DELETE /api/v1/admin/employees/:id
+ */
+router.delete(
+  '/admin/employees/:id',
+  authenticate,
+  authorize('super_admin'),
+  EmployeeController.deleteEmployee.bind(EmployeeController),
 );
 
 /**

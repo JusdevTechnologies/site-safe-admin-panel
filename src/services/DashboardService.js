@@ -95,13 +95,7 @@ class DashboardService {
         include: [
           {
             model: db.Employee,
-            attributes: ['id', 'employee_id', 'user_id', 'department'],
-            include: [
-              {
-                model: db.User,
-                attributes: ['id', 'username', 'first_name', 'last_name', 'email'],
-              },
-            ],
+            attributes: ['id', 'employee_id', 'first_name', 'last_name', 'department'],
           },
         ],
         where: filters.startDate || filters.endDate ? {
@@ -122,11 +116,11 @@ class DashboardService {
         id: record.id,
         type: 'punch_activity',
         action: record.punch_type === 'punch_in' ? 'Punch In' : 'Punch Out',
-        description: `Employee ${record.Employee?.User?.first_name || ''} ${record.Employee?.User?.last_name || ''} ${record.punch_type === 'punch_in' ? 'punched in' : 'punched out'}`,
+        description: `Employee ${record.Employee?.first_name || ''} ${record.Employee?.last_name || ''} ${record.punch_type === 'punch_in' ? 'punched in' : 'punched out'}`,
         employee: {
           id: record.Employee?.id,
           employeeId: record.Employee?.employee_id,
-          name: `${record.Employee?.User?.first_name || ''} ${record.Employee?.User?.last_name || ''}`.trim(),
+          name: `${record.Employee?.first_name || ''} ${record.Employee?.last_name || ''}`.trim(),
           department: record.Employee?.department,
         },
         timestamp: record.timestamp,

@@ -40,7 +40,6 @@ class MobileService {
       // Resolve employer-managed employee ID to the internal employee record.
       const employee = await db.Employee.findOne({
         where: { employee_id },
-        include: [db.User],
       });
 
       if (!employee) {
@@ -114,10 +113,6 @@ class MobileService {
         include: [
           {
             model: db.Employee,
-            include: [db.User],
-            attributes: {
-              exclude: ['password_hash'],
-            },
           },
         ],
       });
@@ -139,10 +134,9 @@ class MobileService {
           last_sync: device.last_sync,
         },
         user: {
-          id: device.Employee.User.id,
-          first_name: device.Employee.User.first_name,
-          last_name: device.Employee.User.last_name,
-          email: device.Employee.User.email,
+          first_name: device.Employee.first_name,
+          last_name: device.Employee.last_name,
+          email: device.Employee.email,
           employee_id: device.Employee.employee_id,
           department: device.Employee.department,
         },
@@ -342,7 +336,6 @@ class MobileService {
         include: [
           {
             model: db.Employee,
-            include: [db.User],
           },
         ],
       });
@@ -390,7 +383,7 @@ class MobileService {
         employee: {
           id: employee.id,
           employee_id: employee.employee_id,
-          name: `${employee.User.first_name} ${employee.User.last_name}`.trim(),
+          name: `${employee.first_name} ${employee.last_name || ''}`.trim(),
         },
       };
     } catch (error) {
@@ -413,9 +406,9 @@ class MobileService {
       camera_blocked: device.camera_blocked,
       employee_id: employee.employee_id,
       user: {
-        first_name: employee.User.first_name,
-        last_name: employee.User.last_name,
-        email: employee.User.email,
+        first_name: employee.first_name,
+        last_name: employee.last_name,
+        email: employee.email,
       },
       timestamp: new Date().toISOString(),
     };

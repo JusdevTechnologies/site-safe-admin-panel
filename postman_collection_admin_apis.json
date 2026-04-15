@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "admin-api-collection-site-safe",
     "name": "Site Safe Admin Panel - Complete APIs",
-    "description": "Complete API collection for Site Safe Admin Panel including:\n\n**Admin Panel APIs (17 Endpoints):**\n- Authentication: Admin login, token refresh, user info, logout\n- Dashboard: Statistics, recent activities, device history, OTP summary\n- Device Management: List devices, block camera, unblock camera\n- OTP Management: Generate, get current, list history, admin list, verify\n- User Management: List admins, create admin, get user, update user, delete user\n\n**Mobile APIs (Existing):**\n- Device Registration\n- Device Status Monitoring\n- OTP-based Device Uninstallation\n\n**Authentication:** All admin endpoints require JWT token in Authorization header. Use Admin Login to obtain token.\n\n**API Base URL**: {{base_url}}/api/v1\n\n**Rate Limit**: 100 requests per 15 minutes",
+    "description": "Complete API collection for Site Safe Admin Panel including:\n\n**Admin Panel APIs (22 Endpoints):**\n- Authentication: Admin login, token refresh, user info, logout\n- Dashboard: Statistics, recent activities, device history, OTP summary\n- Device Management: List devices, block camera, unblock camera\n- OTP Management: Generate, get current, list history, admin list, verify\n- Employee Management: List employees, create employee, get employee, update employee, delete employee\n- User Management: List admins, create admin, get user, update user, delete user\n\n**Mobile APIs (Existing):**\n- Device Registration\n- Device Status Monitoring\n- OTP-based Device Uninstallation\n\n**Authentication:** All admin endpoints require JWT token in Authorization header. Use Admin Login to obtain token.\n\n**API Base URL**: {{base_url}}/api/v1\n\n**Rate Limit**: 100 requests per 15 minutes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1331,6 +1331,291 @@
       ]
     },
     {
+      "name": "Employee Management",
+      "description": "Employee management endpoints. Employees are standalone entities (not linked to admin users). Create an employee before registering a mobile device.",
+      "item": [
+        {
+          "name": "List Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/employees?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "employees"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Records per page (default: 10, max: 100)"
+                }
+              ]
+            },
+            "description": "List all employees with pagination.\n\n**Authentication:** Required (super_admin only)\n\n**Query Parameters:**\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=10, max=100): Records per page\n\n**Response:** 200 OK with paginated employee list"
+          },
+          "response": [
+            {
+              "name": "Success - Employees Retrieved",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Employees retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"770e8400-e29b-41d4-a716-446655440010\",\n      \"employeeId\": \"EMP001\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"email\": \"john.doe@company.com\",\n      \"phone\": \"+1234567890\",\n      \"department\": \"Engineering\",\n      \"deviceOs\": \"android\",\n      \"status\": \"active\",\n      \"devices\": [],\n      \"createdAt\": \"2026-04-15T10:00:00.000Z\",\n      \"updatedAt\": \"2026-04-15T10:00:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 20\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP001\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@company.com\",\n  \"phone\": \"+1234567890\",\n  \"department\": \"Engineering\",\n  \"deviceOs\": \"android\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/employees",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "employees"]
+            },
+            "description": "Create a new employee record. **This must be done before the employee can register a mobile device.**\n\n**Authentication:** Required (super_admin only)\n\n**Request Body:**\n- `employeeId` (string, required): Employer-assigned employee ID (e.g. EMP001). Must be unique.\n- `firstName` (string, required): Employee first name\n- `lastName` (string, optional): Employee last name\n- `email` (string, optional): Employee email address\n- `phone` (string, optional): Employee phone number\n- `department` (string, optional): Department name\n- `deviceOs` (enum, required): Target device OS — `android` or `ios`\n\n**Response:** 201 Created with new employee details\n\n**Pre-requisite for:** Mobile device registration (`POST /api/v1/mobile/devices/register`)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('employee_internal_id', json.data.id);",
+                  "    pm.test('Employee created - ID captured', () => pm.response.to.have.status(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "Success - Employee Created",
+              "originalRequest": {},
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Employee created successfully\",\n  \"data\": {\n    \"id\": \"770e8400-e29b-41d4-a716-446655440010\",\n    \"employeeId\": \"EMP001\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@company.com\",\n    \"phone\": \"+1234567890\",\n    \"department\": \"Engineering\",\n    \"deviceOs\": \"android\",\n    \"status\": \"active\",\n    \"devices\": [],\n    \"createdAt\": \"2026-04-15T10:00:00.000Z\",\n    \"updatedAt\": \"2026-04-15T10:00:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - Employee ID Conflict",
+              "originalRequest": {},
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Employee ID already exists\",\n    \"code\": \"CONFLICT\",\n    \"statusCode\": 409\n  }\n}"
+            },
+            {
+              "name": "Error - Validation Failed",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation error\",\n  \"errors\": [\n    \"employeeId is required\",\n    \"firstName is required\",\n    \"deviceOs must be android or ios\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Employee",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/employees/{{employee_internal_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "employees", "{{employee_internal_id}}"]
+            },
+            "description": "Get a specific employee by their internal UUID.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `id` (UUID): Employee internal UUID (from create or list response)\n\n**Response:** 200 OK with employee details including associated devices"
+          },
+          "response": [
+            {
+              "name": "Success - Employee Retrieved",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Employee retrieved successfully\",\n  \"data\": {\n    \"id\": \"770e8400-e29b-41d4-a716-446655440010\",\n    \"employeeId\": \"EMP001\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@company.com\",\n    \"phone\": \"+1234567890\",\n    \"department\": \"Engineering\",\n    \"deviceOs\": \"android\",\n    \"status\": \"active\",\n    \"devices\": [\n      {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"identifier\": \"DEVICE123\",\n        \"name\": \"Samsung Galaxy S23\",\n        \"os\": \"android\",\n        \"status\": \"active\",\n        \"cameraBlocked\": false\n      }\n    ],\n    \"createdAt\": \"2026-04-15T10:00:00.000Z\",\n    \"updatedAt\": \"2026-04-15T10:00:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - Employee Not Found",
+              "originalRequest": {},
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Employee not found\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jonathan\",\n  \"lastName\": \"Doe\",\n  \"email\": \"jonathan.doe@company.com\",\n  \"phone\": \"+1987654321\",\n  \"department\": \"Operations\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/employees/{{employee_internal_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "employees", "{{employee_internal_id}}"]
+            },
+            "description": "Partially update an employee record.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `id` (UUID): Employee internal UUID\n\n**Request Body (all fields optional — send only fields to update):**\n- `firstName` (string): First name\n- `lastName` (string): Last name\n- `email` (string): Email address\n- `phone` (string): Phone number\n- `department` (string): Department\n- `deviceOs` (enum): `android` or `ios`\n- `status` (enum): `active` or `inactive`\n\n**Note:** To deactivate an employee set `status: inactive`. This will prevent new device registrations for that employee.\n\n**Response:** 200 OK with updated employee details"
+          },
+          "response": [
+            {
+              "name": "Success - Employee Updated",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Employee updated successfully\",\n  \"data\": {\n    \"id\": \"770e8400-e29b-41d4-a716-446655440010\",\n    \"employeeId\": \"EMP001\",\n    \"firstName\": \"Jonathan\",\n    \"lastName\": \"Doe\",\n    \"email\": \"jonathan.doe@company.com\",\n    \"phone\": \"+1987654321\",\n    \"department\": \"Operations\",\n    \"deviceOs\": \"android\",\n    \"status\": \"active\",\n    \"devices\": [],\n    \"createdAt\": \"2026-04-15T10:00:00.000Z\",\n    \"updatedAt\": \"2026-04-15T11:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/employees/{{employee_internal_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "employees", "{{employee_internal_id}}"]
+            },
+            "description": "Soft-delete an employee record. The record is retained for audit purposes.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `id` (UUID): Employee internal UUID\n\n**Response:** 200 OK with success message"
+          },
+          "response": [
+            {
+              "name": "Success - Employee Deleted",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Employee deleted successfully\",\n  \"data\": null\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Mobile API - Device Registration",
       "description": "Mobile app device registration flows",
       "item": [
@@ -1599,6 +1884,12 @@
       "value": "12345678",
       "type": "string",
       "description": "8-digit OTP code. Get from OTP request response in development mode."
+    },
+    {
+      "key": "employee_internal_id",
+      "value": "",
+      "type": "string",
+      "description": "Employee internal UUID from database. Automatically set after Create Employee. Use in GET/PATCH/DELETE employee endpoints."
     }
   ]
 }

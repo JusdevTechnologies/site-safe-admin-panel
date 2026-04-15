@@ -7,20 +7,28 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
-      },
       employee_id: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: {
           msg: 'Employee ID already exists',
         },
+      },
+      first_name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+      },
+      last_name: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      email: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
+      phone: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
       },
       department: {
         type: DataTypes.STRING,
@@ -50,7 +58,6 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Employee.associate = (models) => {
-    Employee.belongsTo(models.User, { foreignKey: 'user_id' });
     Employee.hasMany(models.Device, { foreignKey: 'employee_id' });
     Employee.hasMany(models.PunchRecord, { foreignKey: 'employee_id' });
   };
