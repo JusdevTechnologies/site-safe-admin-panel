@@ -30,7 +30,12 @@ class DeviceController {
       const filters = {
         search: req.query.search,
         status: req.query.status,
-        cameraBlockedFilter: req.query.cameraBlocked === 'true',
+        // Only apply camera filter when the query param is explicitly provided;
+        // evaluating `undefined === 'true'` would yield `false` and permanently
+        // restrict results to unblocked devices when no filter is intended.
+        cameraBlockedFilter: req.query.cameraBlocked !== undefined
+          ? req.query.cameraBlocked === 'true'
+          : undefined,
         os: req.query.os,
       };
 

@@ -193,30 +193,37 @@ class OtpService {
    */
   async verifyOtp(deviceId, otpCode) {
     try {
+      // Find by device only (not by code) so the attempt counter can always
+      // be incremented — searching by code would prevent incrementing when a
+      // wrong code is submitted, bypassing the brute-force protection entirely.
       const otp = await db.OneTimePassword.findOne({
         where: {
           device_id: deviceId,
-          otp_code: otpCode,
+          is_used: false,
+          expires_at: { [Op.gt]: new Date() },
         },
+        order: [['created_at', 'DESC']],
       });
 
       if (!otp) {
-        throw new NotFoundError('Invalid OTP');
+        throw new NotFoundError('No active OTP found for this device');
       }
 
-      // Check if OTP is already used
-      if (otp.is_used) {
-        throw new ConflictError('OTP has already been used');
-      }
-
-      // Check if OTP has expired
-      if (new Date() > otp.expires_at) {
-        throw new ConflictError('OTP has expired');
-      }
-
-      // Check max attempts
+      // Check max attempts before consuming one
       if (otp.attempt_count >= otp.max_attempts) {
         throw new ConflictError('Maximum OTP verification attempts exceeded');
+      }
+
+      // Increment attempt count unconditionally so every guess is tracked
+      await otp.increment('attempt_count');
+      // Refresh in-memory value after increment
+      await otp.reload();
+
+      // Verify OTP code
+      if (otp.otp_code !== otpCode) {
+        throw new NotFoundError(
+          `Invalid OTP. ${otp.max_attempts - otp.attempt_count} attempt(s) remaining.`,
+        );
       }
 
       // Mark OTP as used
@@ -232,24 +239,6 @@ class OtpService {
         message: 'OTP verified successfully',
       };
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof ConflictError) {
-        // Increment attempt count on verification failure
-        try {
-          const otp = await db.OneTimePassword.findOne({
-            where: {
-              device_id: deviceId,
-              otp_code: otpCode,
-            },
-          });
-
-          if (otp && !otp.is_used) {
-            await otp.increment('attempt_count');
-          }
-        } catch (e) {
-          logger.warn(`Error incrementing OTP attempt count: ${e.message}`);
-        }
-      }
-
       logger.error(`Error verifying OTP: ${error.message}`);
       throw error;
     }

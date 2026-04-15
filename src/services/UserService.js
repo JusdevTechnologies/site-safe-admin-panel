@@ -57,8 +57,9 @@ class UserService {
         where.status = filters.status;
       }
 
-      // Apply role filter
-      if (filters.role) {
+      // Apply role filter — only accept valid admin-scoped roles to avoid
+      // overwriting the Op.in guard with an arbitrary value (e.g. 'viewer').
+      if (filters.role && ['super_admin', 'admin'].includes(filters.role)) {
         where.role = filters.role;
       }
 

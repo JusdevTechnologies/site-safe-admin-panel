@@ -19,12 +19,18 @@ class DashboardService {
         whereClause.status = filters.deviceStatus;
       }
 
-      // Get all device statistics
+      // Run all counts in parallel for efficiency
       const [
         activeDevices,
         inactiveDevices,
         blockedDevices,
         lostDevices,
+        totalDevices,
+        cameraBlockedCount,
+        totalEmployees,
+        activeEmployees,
+        totalUsers,
+        activeUsers,
       ] = await Promise.all([
         db.Device.count({
           where: { ...whereClause, status: 'active', deleted_at: null },
@@ -38,27 +44,29 @@ class DashboardService {
         db.Device.count({
           where: { ...whereClause, status: 'lost', deleted_at: null },
         }),
+        db.Device.count({
+          where: { deleted_at: null },
+        }),
+        db.Device.count({
+          where: { camera_blocked: true, deleted_at: null },
+        }),
+        db.Employee.count({
+          where: { deleted_at: null },
+        }),
+        db.Employee.count({
+          where: { deleted_at: null, status: 'active' },
+        }),
+        db.User.count({
+          where: { deleted_at: null },
+        }),
+        db.User.count({
+          where: { deleted_at: null, status: 'active' },
+        }),
       ]);
 
-      // Get camera blocking statistics
-      const cameraBlockedCount = await db.Device.count({
-        where: {
-          camera_blocked: true,
-          deleted_at: null,
-        },
-      });
-
-      const cameraUnblockedCount = activeDevices - cameraBlockedCount;
-
-      // Get total devices
-      const totalDevices = await db.Device.count({
-        where: { deleted_at: null },
-      });
-
-      // Get active employees
-      const activeEmployees = await db.Employee.count({
-        where: { deleted_at: null, status: 'active' },
-      });
+      // cameraUnblockedCount must be derived from totalDevices, not activeDevices,
+      // because cameraBlockedCount spans all device statuses.
+      const cameraUnblockedCount = totalDevices - cameraBlockedCount;
 
       return {
         devices: {
@@ -74,6 +82,11 @@ class DashboardService {
         },
         employees: {
           active: activeEmployees,
+          total: totalEmployees,
+        },
+        users: {
+          active: activeUsers,
+          total: totalUsers,
         },
       };
     } catch (error) {
