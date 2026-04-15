@@ -14,10 +14,20 @@ class MobileValidator {
    */
   static validateDeviceRegistration(data) {
     const schema = Joi.object({
-      employee_id: Joi.string().uuid().required().messages({
-        'string.guid': 'Invalid employee ID format',
-        'any.required': 'Employee ID is required',
-      }),
+      employee_id: Joi.string()
+        .trim()
+        .min(3)
+        .max(50)
+        .pattern(/^[A-Za-z0-9_-]+$/)
+        .required()
+        .messages({
+          'string.empty': 'Employee ID is required',
+          'string.min': 'Employee ID must be at least 3 characters',
+          'string.max': 'Employee ID must not exceed 50 characters',
+          'string.pattern.base':
+            'Employee ID can only contain letters, numbers, underscores, and hyphens',
+          'any.required': 'Employee ID is required',
+        }),
       device_identifier: Joi.string().trim().min(5).max(255).required().messages({
         'string.empty': 'Device identifier cannot be empty',
         'string.min': 'Device identifier must be at least 5 characters',

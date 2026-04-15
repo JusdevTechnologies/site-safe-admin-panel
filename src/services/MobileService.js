@@ -16,7 +16,7 @@ class MobileService {
    * Creates or updates device registration with push notification token
    *
    * @param {Object} deviceData - Device information
-   * @param {string} deviceData.employee_id - Employee UUID
+   * @param {string} deviceData.employee_id - Employer-managed employee ID (for example, EMP001)
    * @param {string} deviceData.device_identifier - Unique device identifier
    * @param {string} deviceData.device_os - Device OS ('android' or 'ios')
    * @param {string} deviceData.device_name - Device name (optional)
@@ -37,8 +37,9 @@ class MobileService {
     } = deviceData;
 
     try {
-      // Verify employee exists
-      const employee = await db.Employee.findByPk(employee_id, {
+      // Resolve employer-managed employee ID to the internal employee record.
+      const employee = await db.Employee.findOne({
+        where: { employee_id },
         include: [db.User],
       });
 
@@ -56,7 +57,7 @@ class MobileService {
         where: { device_identifier },
       });
 
-      if (device && device.employee_id !== employee_id) {
+      if (device && device.employee_id !== employee.id) {
         throw new ConflictError(
           'Device identifier is already registered to another employee. Please contact your administrator.',
         );
@@ -71,11 +72,13 @@ class MobileService {
           status: 'active',
         });
 
-        logger.info(`Device registration updated: ${device.id} for employee: ${employee_id}`);
+        logger.info(
+          `Device registration updated: ${device.id} for employee: ${employee.employee_id}`,
+        );
       } else {
         // Create new device
         device = await db.Device.create({
-          employee_id,
+          employee_id: employee.id,
           device_identifier,
           device_os,
           device_name,
@@ -86,7 +89,7 @@ class MobileService {
           camera_blocked: false,
         });
 
-        logger.info(`New device registered: ${device.id} for employee: ${employee_id}`);
+        logger.info(`New device registered: ${device.id} for employee: ${employee.employee_id}`);
       }
 
       return this.formatDeviceResponse(device, employee);
