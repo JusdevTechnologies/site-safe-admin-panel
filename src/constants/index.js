@@ -264,6 +264,40 @@ const SKIP_SETUP_ITEMS = {
   ZOOM: 'Zoom',
 };
 
+const VALID_SKIP_SETUP_ITEMS = [
+  'AppleID',
+  'Appearance',
+  'Biometrics',
+  'Diagnostics',
+  'DisplayTone',
+  'Enrollment',
+  'FileVault',
+  'ICDP',
+  'ICloudStorage',
+  'Location',
+  'Messages',
+  'MoveFromAndroid',
+  'Onboarding',
+  'Passcode',
+  'Payment',
+  'Privacy',
+  'Restore',
+  'RestoreCompleted',
+  'ScreenTime',
+  'Siri',
+  'SoftwareUpdate',
+  'TOS',
+  'TrustCertificates',
+  'WatchMigration',
+  'Welcome',
+  'Zoom',
+];
+
+const SKIP_SETUP_ITEM_ALIASES = {
+  Message: 'Messages',
+  ICD: 'ICDP',
+};
+
 module.exports = {
   HTTP_STATUS,
   ERROR_CODES,
@@ -287,4 +321,6 @@ module.exports = {
   SYNC_STATUS,
   PROFILE_DOWNLOAD_MIME_TYPE,
   SKIP_SETUP_ITEMS,
+  VALID_SKIP_SETUP_ITEMS,
+  SKIP_SETUP_ITEM_ALIASES,
 };

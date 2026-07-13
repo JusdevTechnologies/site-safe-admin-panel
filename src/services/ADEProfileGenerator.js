@@ -15,9 +15,9 @@ const {
 
 class ADEProfileGenerator {
   async generateMobileconfig(profile, _enrollment) {
-    logger.info(`[ADEProfileGen] Generating .mobileconfig for profile ${profile.profileUuid}`);
+    const profileUuid = profile.profileUuid || uuidv4();
+    logger.info(`[ADEProfileGen] Starting .mobileconfig generation for profile ${profileUuid}`);
 
-    const payloadUuid = profile.profileUuid || uuidv4();
     const identifier = environment.ade.profileIdentifier;
     const orgDisplayName = profile.organizationDisplayName || profile.organization;
     const checkinUrl = profile.checkinUrl || environment.ade.checkinUrl || `${profile.url}/checkin`;
@@ -26,7 +26,7 @@ class ADEProfileGenerator {
     const skipItems = profile.skipSetupAssistantItems || [];
 
     const profileData = {
-      payloadUuid,
+      payloadUuid: profileUuid,
       identifier,
       displayName: profile.displayName,
       description: profile.description || `MDM Enrollment for ${profile.organization}`,
@@ -51,11 +51,14 @@ class ADEProfileGenerator {
       department: profile.department || environment.ade.department,
     };
 
+    logger.debug(`[ADEProfileGen] Validating profile data for ${profileUuid}`);
     ProfileValidator.validate(profileData);
+    logger.info(`[ADEProfileGen] Profile data validated successfully for ${profileUuid}`);
 
     const rootCaCerts = await CertificateLoader.loadRootCACertificates();
     const identityCerts = await CertificateLoader.loadIdentityCertificate();
 
+    logger.debug(`[ADEProfileGen] Building ${rootCaCerts.length} root CA payload(s)`);
     const rootCaPayloads = rootCaCerts.map((cert) => RootCAPayloadBuilder.build(cert, identifier));
 
     let identityPayload = null;
@@ -65,8 +68,12 @@ class ADEProfileGenerator {
       const result = IdentityPayloadBuilder.build(identityCerts, identifier);
       identityPayload = result.payload;
       identityPayloadUuid = result.payloadUuid;
+      logger.info(`[ADEProfileGen] Identity payload UUID ${identityPayloadUuid} linked to MDM payload`);
+    } else {
+      logger.debug('[ADEProfileGen] No identity certificate — MDM payload will not include IdentityCertificateUUID');
     }
 
+    logger.debug(`[ADEProfileGen] Building MDM payload for topic "${topic}"`);
     const mdmPayload = MDMPayloadBuilder.build({
       identifier,
       serverUrl,
@@ -80,6 +87,7 @@ class ADEProfileGenerator {
       anchorCerts: rootCaCerts,
     });
 
+    logger.debug(`[ADEProfileGen] Assembling profile with ${rootCaPayloads.length + (identityPayload ? 1 : 0) + 1} payload(s)`);
     const assembled = PayloadAssembler.assemble({
       profile: profileData,
       rootCaPayloads,
@@ -87,12 +95,19 @@ class ADEProfileGenerator {
       mdmPayload,
     });
 
+    logger.debug(`[ADEProfileGen] Serializing profile to XML`);
     const xml = XMLSerializer.serialize(assembled);
 
+    logger.info(`[ADEProfileGen] Signing ${ProfileSigner._enabled ? 'enabled' : 'disabled'}`);
     const signed = ProfileSigner.sign(xml);
 
+    const payloadCount = rootCaPayloads.length + (identityPayload ? 1 : 0) + 1;
     logger.info(
-      `[ADEProfileGen] Generated .mobileconfig for ${profile.profileUuid} (${rootCaPayloads.length} root CA, ${identityPayload ? 1 : 0} identity payloads)`,
+      `[ADEProfileGen] Generated .mobileconfig for ${profileUuid} — ` +
+        `${payloadCount} payload(s) (${rootCaPayloads.length} root CA, ` +
+        `${identityPayload ? 1 : 0} identity, 1 MDM), ` +
+        `signed: ${signed.signed}, ` +
+        `size: ${signed.content.length} bytes`,
     );
 
     return signed.content;

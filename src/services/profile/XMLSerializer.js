@@ -4,6 +4,7 @@ class XMLSerializer {
   serialize(profileDict) {
     const xml = this._buildPlistXml(profileDict);
     this._validate(xml);
+    logger.debug(`[XMLSerializer] Generated XML (${xml.length} bytes)`);
     return xml;
   }
 
@@ -23,16 +24,19 @@ class XMLSerializer {
     const indent = '  '.repeat(depth + 1);
     const lines = ['<dict>'];
 
-    for (const [key, value] of Object.entries(dict)) {
+    const keys = Object.keys(dict).sort();
+
+    for (const key of keys) {
+      const value = dict[key];
       lines.push(`${indent}<key>${this._escapeXml(key)}</key>`);
-      lines.push(this._serializeValue(value, depth + 1));
+      lines.push(this._serializeValue(value, depth + 1, key));
     }
 
     lines.push(`${'  '.repeat(depth)}</dict>`);
     return lines.join('\n');
   }
 
-  _serializeValue(value, depth) {
+  _serializeValue(value, depth, key) {
     const indent = '  '.repeat(depth + 1);
 
     if (value === null || value === undefined) {
@@ -51,9 +55,6 @@ class XMLSerializer {
     }
 
     if (typeof value === 'string') {
-      if (value.includes('\n') || value.length > 80) {
-        return `${indent}<string>${this._escapeXml(value)}</string>`;
-      }
       return `${indent}<string>${this._escapeXml(value)}</string>`;
     }
 
@@ -117,7 +118,7 @@ class XMLSerializer {
       );
     }
 
-    logger.debug('[XMLSerializer] Generated XML validated successfully');
+    logger.debug('[XMLSerializer] XML validation passed');
   }
 
   _escapeXml(str) {

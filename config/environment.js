@@ -112,7 +112,6 @@ module.exports = {
     checkinUrl: process.env.ADE_CHECKIN_URL || '',
     topic: process.env.ADE_TOPIC || '',
     profileVersion: parseInt(process.env.ADE_PROFILE_VERSION, 10) || 1,
-    identityCertificateUuid: process.env.ADE_IDENTITY_CERT_UUID || '',
     anchorCertificates: process.env.ADE_ANCHOR_CERTS || '',
 
     // Enrollment behavior
@@ -137,6 +136,11 @@ module.exports = {
     rootCaCertPath: process.env.ADE_ROOT_CA_CERT_PATH || '',
     identityCertPath: process.env.ADE_IDENTITY_CERT_PATH || '',
     identityCertPassword: process.env.ADE_IDENTITY_CERT_PASSWORD || '',
+
+    // CMS (PKCS#7) signing configuration
+    signingEnabled: process.env.ADE_SIGNING_ENABLED === 'true',
+    signingCertPath: process.env.ADE_SIGNING_CERT_PATH || '',
+    signingKeyPath: process.env.ADE_SIGNING_KEY_PATH || '',
   },
 
   superAdmin: {

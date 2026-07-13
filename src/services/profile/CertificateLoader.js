@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const forge = require('node-forge');
 const logger = require('../../utils/logger');
 const environment = require('../../../config/environment');
-const { CERTIFICATE_TYPES } = require('../../constants');
 
 class CertificateLoader {
   constructor() {
@@ -24,16 +24,21 @@ class CertificateLoader {
       const resolvedPath = path.resolve(certPath);
       const stats = fs.statSync(resolvedPath);
 
+      let certs;
       if (stats.isDirectory()) {
-        return this._loadCertDirectory(resolvedPath);
+        certs = this._loadCertDirectory(resolvedPath);
+      } else {
+        const cert = this._loadCertFile(resolvedPath);
+        certs = cert ? [cert] : [];
       }
 
-      const cert = this._loadCertFile(resolvedPath);
-      return cert ? [cert] : [];
+      const validated = certs.filter((c) => this._validateRootCACert(c));
+      const ordered = this._orderCertChain(validated);
+
+      logger.info(`[CertLoader] Loaded ${ordered.length} root CA certificate(s) from ${certPath}`);
+      return ordered;
     } catch (err) {
-      logger.warn(
-        `[CertLoader] Failed to load root CA certificates from ${certPath}: ${err.message}`,
-      );
+      logger.warn(`[CertLoader] Failed to load root CA certificates from ${certPath}: ${err.message}`);
       return [];
     }
   }
@@ -48,19 +53,134 @@ class CertificateLoader {
     try {
       const resolvedPath = path.resolve(certPath);
       const data = fs.readFileSync(resolvedPath);
-      const base64 = data.toString('base64');
 
+      const validation = this._validatePKCS12(data, this._identityPassword);
+      if (!validation.valid) {
+        logger.warn(`[CertLoader] Identity certificate validation failed: ${validation.error}`);
+        return null;
+      }
+
+      logger.info('[CertLoader] Identity certificate loaded and validated successfully');
       return {
         displayName: 'MDM Identity Certificate',
         description: 'Identity certificate for MDM enrollment',
-        pkcs12Base64: base64,
+        rawData: data,
+        expirationDate: validation.expirationDate,
+        commonName: validation.commonName,
       };
     } catch (err) {
-      logger.warn(
-        `[CertLoader] Failed to load identity certificate from ${certPath}: ${err.message}`,
-      );
+      logger.warn(`[CertLoader] Failed to load identity certificate from ${certPath}: ${err.message}`);
       return null;
     }
+  }
+
+  _validatePKCS12(p12Buffer, password) {
+    try {
+      const p12Der = forge.util.createBuffer(p12Buffer.toString('binary'));
+      const p12Asn1 = forge.asn1.fromDer(p12Der);
+      const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, password);
+
+      const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+      const keyBagsPlain = p12.getBags({ bagType: forge.pki.oids.keyBag });
+      const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+
+      const hasKey =
+        (keyBags[forge.pki.oids.pkcs8ShroudedKeyBag] &&
+          keyBags[forge.pki.oids.pkcs8ShroudedKeyBag].length > 0) ||
+        (keyBagsPlain[forge.pki.oids.keyBag] &&
+          keyBagsPlain[forge.pki.oids.keyBag].length > 0);
+
+      if (!hasKey) {
+        return { valid: false, error: 'No private key found in PKCS#12 bundle' };
+      }
+
+      const certList = certBags[forge.pki.oids.certBag] || [];
+      if (certList.length === 0) {
+        return { valid: false, error: 'No certificate found in PKCS#12 bundle' };
+      }
+
+      const leafCert = certList[0].cert;
+      const now = new Date();
+
+      if (leafCert.validity.notAfter && leafCert.validity.notAfter < now) {
+        return {
+          valid: false,
+          error: `Identity certificate expired on ${leafCert.validity.notAfter.toISOString()}`,
+        };
+      }
+
+      if (leafCert.validity.notBefore && leafCert.validity.notBefore > now) {
+        return {
+          valid: false,
+          error: `Identity certificate not yet valid until ${leafCert.validity.notBefore.toISOString()}`,
+        };
+      }
+
+      const commonName = leafCert.subject.getField('CN')
+        ? leafCert.subject.getField('CN').value
+        : 'Unknown';
+
+      logger.info(
+        `[CertLoader] PKCS#12 validated: CN="${commonName}", expires=${leafCert.validity.notAfter?.toISOString() || 'unknown'}`,
+      );
+
+      return {
+        valid: true,
+        expirationDate: leafCert.validity.notAfter || null,
+        commonName,
+      };
+    } catch (err) {
+      const message = err.message.toLowerCase();
+      if (message.includes('password') || message.includes('invalid password') || message.includes('pkcs12')) {
+        return { valid: false, error: `Invalid identity certificate password or corrupted PKCS#12 file: ${err.message}` };
+      }
+      return { valid: false, error: `PKCS#12 parsing failed: ${err.message}` };
+    }
+  }
+
+  _validateRootCACert(cert) {
+    try {
+      const pem = this._bufferToPem(cert.rawData);
+      forge.pki.certificateFromPem(pem);
+      return true;
+    } catch (err) {
+      logger.warn(`[CertLoader] Invalid root CA certificate "${cert.displayName}": ${err.message}`);
+      return false;
+    }
+  }
+
+  _orderCertChain(certs) {
+    if (certs.length <= 1) return certs;
+
+    const parsed = certs.map((c) => {
+      try {
+        const pem = this._bufferToPem(c.rawData);
+        const forgeCert = forge.pki.certificateFromPem(pem);
+        const isSelfSigned =
+          forgeCert.subject.attributes.length > 0 &&
+          forgeCert.issuer.attributes.length > 0 &&
+          forgeCert.subject.hash === forgeCert.issuer.hash;
+        return { ...c, _isSelfSigned: isSelfSigned, _forgeCert: forgeCert };
+      } catch {
+        return { ...c, _isSelfSigned: true };
+      }
+    });
+
+    parsed.sort((a, b) => {
+      if (a._isSelfSigned === b._isSelfSigned) return 0;
+      return a._isSelfSigned ? 1 : -1;
+    });
+
+    return parsed.map(({ _isSelfSigned, _forgeCert, ...cert }) => cert);
+  }
+
+  _bufferToPem(rawData) {
+    const b64 = rawData.toString('base64');
+    const lines = [];
+    for (let i = 0; i < b64.length; i += 64) {
+      lines.push(b64.slice(i, i + 64));
+    }
+    return ['-----BEGIN CERTIFICATE-----', ...lines, '-----END CERTIFICATE-----'].join('\n');
   }
 
   _loadCertDirectory(dirPath) {
@@ -83,9 +203,9 @@ class CertificateLoader {
   _loadCertFile(filePath) {
     try {
       const raw = fs.readFileSync(filePath, 'utf8');
-      const derBase64 = this._pemToDerBase64(raw);
+      const derBuffer = this._pemToDerBuffer(raw);
 
-      if (!derBase64) {
+      if (!derBuffer || derBuffer.length === 0) {
         logger.warn(`[CertLoader] Could not extract DER from ${filePath}`);
         return null;
       }
@@ -93,7 +213,7 @@ class CertificateLoader {
       return {
         displayName: path.basename(filePath, path.extname(filePath)),
         description: `Root CA: ${path.basename(filePath)}`,
-        derBase64,
+        rawData: derBuffer,
       };
     } catch (err) {
       logger.warn(`[CertLoader] Error reading cert file ${filePath}: ${err.message}`);
@@ -101,20 +221,23 @@ class CertificateLoader {
     }
   }
 
-  _pemToDerBase64(pemContent) {
+  _pemToDerBuffer(pemContent) {
     const pemRegex = /-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/;
     const match = pemContent.match(pemRegex);
 
     if (!match) {
-      return Buffer.from(pemContent.trim(), 'base64').toString('base64');
+      const trimmed = pemContent.trim();
+      if (!trimmed || !/^[A-Za-z0-9+/]*={0,2}$/.test(trimmed)) {
+        return null;
+      }
+      return Buffer.from(trimmed, 'base64');
     }
 
     const base64Data = match[1].replace(/\s/g, '');
     try {
-      const der = Buffer.from(base64Data, 'base64');
-      return der.toString('base64');
+      return Buffer.from(base64Data, 'base64');
     } catch {
-      return base64Data;
+      return null;
     }
   }
 

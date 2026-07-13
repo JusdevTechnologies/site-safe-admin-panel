@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../../utils/logger');
 
 class MDMPayloadBuilder {
   build({
@@ -31,6 +32,9 @@ class MDMPayloadBuilder {
       IsMandatory: isMandatory,
       IsMDMRemovable: isMDMRemovable,
       AwaitDeviceConfigured: awaitDeviceConfigured,
+      AccessRights: accessRights,
+      UserIdentity: false,
+      CheckInWhenRemoving: true,
     };
 
     if (topic && topic.includes('.')) {
@@ -42,12 +46,12 @@ class MDMPayloadBuilder {
     }
 
     if (anchorCerts.length > 0) {
-      payload.AnchorCertificates = anchorCerts.map((cert) => cert.derBase64);
+      payload.AnchorCertificates = anchorCerts.map((cert) => cert.rawData);
     }
 
-    payload.AccessRights = accessRights;
-    payload.UserIdentity = false;
-    payload.CheckInWhenRemoving = true;
+    logger.debug(
+      `[MDMPayloadBuilder] Built MDM payload ${payloadUuid} for topic "${topic}"`,
+    );
 
     return payload;
   }
