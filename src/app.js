@@ -17,6 +17,7 @@ const userRoutes = require('./routes/users');
 const deviceRoutes = require('./routes/devices');
 const employeeRoutes = require('./routes/employees');
 const mobileRoutes = require('./routes/mobile');
+const serverRoutes = require('./routes/server');
 
 const logger = require('./utils/logger');
 
@@ -72,6 +73,9 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/devices', deviceRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/mobile', mobileRoutes);
+
+// Server routes — Apple ADE / NanoDEP infrastructure endpoints
+app.use('/server', serverRoutes);
 
 // ============================================
 // 404 HANDLER

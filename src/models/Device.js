@@ -103,6 +103,7 @@ module.exports = (sequelize, DataTypes) => {
     });
     Device.hasMany(models.DevicePolicy, { foreignKey: 'device_id' });
     Device.hasMany(models.NotificationLog, { foreignKey: 'device_id' });
+    Device.hasMany(models.AdeEnrollment, { foreignKey: 'device_id' });
   };
 
   return Device;

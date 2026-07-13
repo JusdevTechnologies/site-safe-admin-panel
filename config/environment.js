@@ -105,6 +105,16 @@ module.exports = {
     password: process.env.REDIS_PASSWORD || undefined,
   },
 
+  // Apple ADE (Automated Device Enrollment)
+  ade: {
+    organization: process.env.ADE_ORGANIZATION || 'Organization Name',
+    apiKey: process.env.ADE_API_KEY,
+    profileUrl: process.env.ADE_PROFILE_URL || 'http://localhost:3000',
+    profileVersion: parseInt(process.env.ADE_PROFILE_VERSION, 10) || 1,
+    enabled: process.env.ADE_ENABLED === 'true',
+    topic: process.env.ADE_TOPIC || '',
+  },
+
   // Super Admin
   superAdmin: {
     email: process.env.SUPER_ADMIN_EMAIL || 'admin@example.com',
