@@ -274,6 +274,146 @@ class FirebaseService {
 
     return this.send(device, notification, data, 'otp_request');
   }
+
+  // ---------------------------------------------------------------------------
+  // MDM Notification Helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Notify device that an MDM command completed successfully.
+   *
+   * @param {Object} device       - Device record
+   * @param {string} commandType  - MDM command type (e.g. InstallProfile, DeviceInformation)
+   * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+   */
+  async sendCommandSuccessNotification(device, commandType) {
+    const notification = {
+      title: 'Command Executed',
+      body: `The ${commandType} command was executed successfully on your device.`,
+    };
+
+    const data = {
+      event: 'mdm_command_success',
+      command_type: commandType,
+      device_id: device.id,
+      timestamp: new Date().toISOString(),
+    };
+
+    return this.send(device, notification, data, 'mdm_command_success');
+  }
+
+  /**
+   * Notify device that an MDM command failed.
+   *
+   * @param {Object} device          - Device record
+   * @param {string} commandType     - MDM command type
+   * @param {string} [failureReason] - Human-readable failure reason
+   * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+   */
+  async sendCommandFailureNotification(device, commandType, failureReason = 'Unknown error') {
+    const notification = {
+      title: 'Command Failed',
+      body: `The ${commandType} command could not be completed. Reason: ${failureReason}. Contact your administrator if this persists.`,
+    };
+
+    const data = {
+      event: 'mdm_command_failure',
+      command_type: commandType,
+      failure_reason: failureReason,
+      device_id: device.id,
+      timestamp: new Date().toISOString(),
+    };
+
+    return this.send(device, notification, data, 'mdm_command_failure');
+  }
+
+  /**
+   * Notify device that a profile has been installed.
+   *
+   * @param {Object} device       - Device record
+   * @param {string} profileName  - Profile identifier (e.g. com.sitesafe.camera.restriction)
+   * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+   */
+  async sendProfileInstalledNotification(device, profileName) {
+    const notification = {
+      title: 'Profile Installed',
+      body: `The profile "${profileName}" has been installed on your device.`,
+    };
+
+    const data = {
+      event: 'mdm_profile_installed',
+      profile_name: profileName,
+      device_id: device.id,
+      timestamp: new Date().toISOString(),
+    };
+
+    return this.send(device, notification, data, 'mdm_profile_installed');
+  }
+
+  /**
+   * Notify device that a profile has been removed.
+   *
+   * @param {Object} device       - Device record
+   * @param {string} profileName  - Profile identifier that was removed
+   * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+   */
+  async sendProfileRemovedNotification(device, profileName) {
+    const notification = {
+      title: 'Profile Removed',
+      body: `The profile "${profileName}" has been removed from your device.`,
+    };
+
+    const data = {
+      event: 'mdm_profile_removed',
+      profile_name: profileName,
+      device_id: device.id,
+      timestamp: new Date().toISOString(),
+    };
+
+    return this.send(device, notification, data, 'mdm_profile_removed');
+  }
+
+  /**
+   * Notify device that it has been marked offline.
+   *
+   * @param {Object} device  - Device record
+   * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+   */
+  async sendDeviceOfflineNotification(device) {
+    const notification = {
+      title: 'Device Offline',
+      body: 'Your device has been marked as offline. It may not receive remote management commands until connectivity is restored.',
+    };
+
+    const data = {
+      event: 'mdm_device_offline',
+      device_id: device.id,
+      timestamp: new Date().toISOString(),
+    };
+
+    return this.send(device, notification, data, 'mdm_device_offline');
+  }
+
+  /**
+   * Notify device that it has been marked online.
+   *
+   * @param {Object} device  - Device record
+   * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+   */
+  async sendDeviceOnlineNotification(device) {
+    const notification = {
+      title: 'Device Online',
+      body: 'Your device is back online and can receive remote management commands.',
+    };
+
+    const data = {
+      event: 'mdm_device_online',
+      device_id: device.id,
+      timestamp: new Date().toISOString(),
+    };
+
+    return this.send(device, notification, data, 'mdm_device_online');
+  }
 }
 
 module.exports = new FirebaseService();

@@ -75,11 +75,15 @@ class AdminValidator {
         'string.email': 'Please provide a valid email address',
         'any.required': 'Email is required',
       }),
-      password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required().messages({
-        'string.empty': 'Password is required',
-        'string.min': 'Password must be at least 8 characters',
-        'string.pattern.base': 'Password must contain uppercase, lowercase, and numbers',
-      }),
+      password: Joi.string()
+        .min(8)
+        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+        .required()
+        .messages({
+          'string.empty': 'Password is required',
+          'string.min': 'Password must be at least 8 characters',
+          'string.pattern.base': 'Password must contain uppercase, lowercase, and numbers',
+        }),
       firstName: Joi.string().max(50).optional().messages({
         'string.max': 'First name must not exceed 50 characters',
       }),
@@ -107,17 +111,23 @@ class AdminValidator {
       email: Joi.string().email().optional().messages({
         'string.email': 'Please provide a valid email address',
       }),
-      password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).optional().messages({
-        'string.min': 'Password must be at least 8 characters',
-        'string.pattern.base': 'Password must contain uppercase, lowercase, and numbers',
-      }),
+      password: Joi.string()
+        .min(8)
+        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+        .optional()
+        .messages({
+          'string.min': 'Password must be at least 8 characters',
+          'string.pattern.base': 'Password must contain uppercase, lowercase, and numbers',
+        }),
       status: Joi.string().valid('active', 'inactive', 'suspended').optional().messages({
         'any.only': 'Status must be active, inactive, or suspended',
       }),
       role: Joi.string().valid('super_admin', 'admin').optional().messages({
         'any.only': 'Role must be either super_admin or admin',
       }),
-    }).min(1).required();
+    })
+      .min(1)
+      .required();
   }
 
   /**
@@ -178,7 +188,9 @@ class AdminValidator {
       status: Joi.string().valid('active', 'inactive').optional().messages({
         'any.only': 'Status must be active or inactive',
       }),
-    }).min(1).required();
+    })
+      .min(1)
+      .required();
   }
 
   /**
@@ -203,6 +215,47 @@ class AdminValidator {
       endDate: Joi.date().iso().optional(),
       deviceStatus: Joi.string().valid('active', 'inactive', 'blocked', 'lost').optional(),
     });
+  }
+
+  /**
+   * Validate MDM profile install request
+   */
+  static mdmInstallProfileSchema() {
+    return Joi.object({
+      udid: Joi.string().max(255).required().messages({
+        'string.empty': 'Device UDID is required',
+        'any.required': 'Device UDID is required',
+      }),
+      profilePayload: Joi.object({
+        PayloadIdentifier: Joi.string().required().messages({
+          'string.empty': 'Profile PayloadIdentifier is required',
+          'any.required': 'Profile PayloadIdentifier is required',
+        }),
+        PayloadContent: Joi.any().required().messages({
+          'any.required': 'Profile PayloadContent is required',
+        }),
+      })
+        .required()
+        .messages({
+          'any.required': 'Profile payload is required',
+        }),
+    }).required();
+  }
+
+  /**
+   * Validate MDM profile remove request
+   */
+  static mdmRemoveProfileSchema() {
+    return Joi.object({
+      udid: Joi.string().max(255).required().messages({
+        'string.empty': 'Device UDID is required',
+        'any.required': 'Device UDID is required',
+      }),
+      profileIdentifier: Joi.string().max(255).required().messages({
+        'string.empty': 'Profile identifier is required',
+        'any.required': 'Profile identifier is required',
+      }),
+    }).required();
   }
 }
 

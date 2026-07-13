@@ -30,6 +30,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      serial_number: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      supervised: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
+      },
       status: {
         type: DataTypes.ENUM('active', 'inactive', 'blocked', 'lost'),
         defaultValue: 'active',
@@ -87,10 +96,10 @@ module.exports = (sequelize, DataTypes) => {
 
   Device.associate = (models) => {
     Device.belongsTo(models.Employee, { foreignKey: 'employee_id' });
-    Device.belongsTo(models.User, { 
-      foreignKey: 'camera_blocked_by', 
+    Device.belongsTo(models.User, {
+      foreignKey: 'camera_blocked_by',
       as: 'blockedByUser',
-      allowNull: true 
+      allowNull: true,
     });
     Device.hasMany(models.DevicePolicy, { foreignKey: 'device_id' });
     Device.hasMany(models.NotificationLog, { foreignKey: 'device_id' });

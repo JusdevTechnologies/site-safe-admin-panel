@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "admin-api-collection-site-safe",
     "name": "Site Safe Admin Panel - Complete APIs",
-    "description": "Complete API collection for Site Safe Admin Panel including:\n\n**Admin Panel APIs (22 Endpoints):**\n- Authentication: Admin login, token refresh, user info, logout\n- Dashboard: Statistics, recent activities, device history, OTP summary\n- Device Management: List devices, block camera, unblock camera\n- OTP Management: Generate, get current, list history, admin list, verify\n- Employee Management: List employees, create employee, get employee, update employee, delete employee\n- User Management: List admins, create admin, get user, update user, delete user\n\n**Mobile APIs (Existing):**\n- Device Registration\n- Device Status Monitoring\n- OTP-based Device Uninstallation\n\n**Authentication:** All admin endpoints require JWT token in Authorization header. Use Admin Login to obtain token.\n\n**API Base URL**: {{base_url}}/api/v1\n\n**Rate Limit**: 100 requests per 15 minutes",
+    "description": "Complete API collection for Site Safe Admin Panel including:\n\n**Admin Panel APIs (31 Endpoints):**\n- Authentication: Admin login, token refresh, user info, logout\n- Dashboard: Statistics, recent activities, device history, OTP summary\n- Device Management: List devices, block camera, unblock camera\n- MDM Management: List NanoMDM devices, list profiles, install profile, remove profile, list commands\n- OTP Management: Generate, get current, list history, admin list, verify\n- Employee Management: List employees, create employee, get employee, update employee, delete employee\n- User Management: List admins, create admin, get user, update user, delete user\n\n**Mobile APIs (Existing):**\n- Device Registration\n- Device Status Monitoring\n- OTP-based Device Uninstallation\n\n**Authentication:** All admin endpoints require JWT token in Authorization header. Use Admin Login to obtain token.\n\n**API Base URL**: {{base_url}}/api/v1\n\n**Rate Limit**: 100 requests per 15 minutes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1610,6 +1610,346 @@
                 }
               ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Employee deleted successfully\",\n  \"data\": null\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MDM Management",
+      "description": "NanoMDM device and profile management endpoints. These APIs communicate directly with the NanoMDM server to manage enrolled devices, install/remove configuration profiles, and track MDM command status.\n\n**Note:** The NanoMDM base URL and authentication credentials must be configured in environment variables before using these endpoints.",
+      "item": [
+        {
+          "name": "List MDM Devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/mdm/devices?limit=50&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "mdm", "devices"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Max records per page (default: 50)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                }
+              ]
+            },
+            "description": "List all devices enrolled in NanoMDM.\n\n**Authentication:** Required (super_admin only)\n\n**Query Parameters:**\n- `limit` (integer, default=50): Max records per page\n- `page` (integer, default=1): Page number\n\n**Response:** 200 OK with NanoMDM device list\n\n**Note:** This lists devices from the NanoMDM server, not the local database."
+          },
+          "response": [
+            {
+              "name": "Success - MDM Devices Listed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"MDM devices retrieved successfully\",\n  \"data\": {\n    \"devices\": [\n      {\n        \"udid\": \"00000000-0000-0000-0000-000000000001\",\n        \"serial_number\": \"ABC123456789\",\n        \"device_name\": \"Samsung Galaxy S23\",\n        \"platform\": \"ios\",\n        \"os_version\": \"17.4.1\",\n        \"model\": \"iPhone 15 Pro\",\n        \"push_token\": \"fcm-token-123\",\n        \"last_seen\": \"2026-07-13T06:00:00.000Z\",\n        \"supervised\": true\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List MDM Profiles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/mdm/profiles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "mdm", "profiles"]
+            },
+            "description": "List all configuration profiles from NanoMDM.\n\n**Authentication:** Required (super_admin only)\n\n**Query Parameters:**\n- `limit` (integer, default=50): Max records per page\n- `page` (integer, default=1): Page number\n\n**Response:** 200 OK with profile list"
+          },
+          "response": [
+            {
+              "name": "Success - MDM Profiles Listed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"MDM profiles retrieved successfully\",\n  \"data\": {\n    \"profiles\": [\n      {\n        \"identifier\": \"com.sitesafe.camera.restriction\",\n        \"display_name\": \"Camera Restriction Policy\",\n        \"description\": \"Restricts device camera access\",\n        \"version\": 1,\n        \"organization\": \"SiteSafe\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Install Profile on Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"udid\": \"00000000-0000-0000-0000-000000000001\",\n  \"profilePayload\": {\n    \"PayloadIdentifier\": \"com.sitesafe.camera.restriction\",\n    \"PayloadType\": \"Configuration\",\n    \"PayloadDisplayName\": \"Camera Restriction Policy\",\n    \"PayloadDescription\": \"Restricts device camera access\",\n    \"PayloadOrganization\": \"SiteSafe\",\n    \"PayloadContent\": [\n      {\n        \"PayloadType\": \"com.apple.applicationaccess\",\n        \"PayloadIdentifier\": \"com.sitesafe.camera.restriction.policy\",\n        \"PayloadUUID\": \"policy-uuid-001\",\n        \"PayloadVersion\": 1,\n        \"PayloadContent\": {\n          \"allowCamera\": false\n        }\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/mdm/profile/install",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "mdm", "profile", "install"]
+            },
+            "description": "Install a configuration profile on a specific device via NanoMDM.\n\n**Authentication:** Required (super_admin only)\n\n**Request Body:**\n- `udid` (string, required): Device UDID from NanoMDM\n- `profilePayload` (object, required): Profile configuration payload\n  - `PayloadIdentifier` (string, required): Unique profile identifier (e.g. com.sitesafe.camera.restriction)\n  - `PayloadType` (string): Profile type (default: Configuration)\n  - `PayloadDisplayName` (string): Display name for the profile\n  - `PayloadDescription` (string): Description of the profile\n  - `PayloadOrganization` (string): Organization name\n  - `PayloadContent` (array): Array of policy payloads\n\n**Response:** 200 OK with command UUID tracking the install operation\n\n**Note:** A DevicePolicy record is created locally to track the assignment."
+          },
+          "response": [
+            {
+              "name": "Success - Profile Installed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile installed successfully\",\n  \"data\": {\n    \"command_uuid\": \"cmd-789abc-def0-1234-5678-90abcdef1234\",\n    \"command_type\": \"InstallProfile\",\n    \"udid\": \"00000000-0000-0000-0000-000000000001\",\n    \"status\": \"sent\"\n  }\n}"
+            },
+            {
+              "name": "Error - Device Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Device UDID is required to assign a profile\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove Profile from Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"udid\": \"00000000-0000-0000-0000-000000000001\",\n  \"profileIdentifier\": \"com.sitesafe.camera.restriction\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/mdm/profile/remove",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "mdm", "profile", "remove"]
+            },
+            "description": "Remove a configuration profile from a device via NanoMDM.\n\n**Authentication:** Required (super_admin only)\n\n**Request Body:**\n- `udid` (string, required): Device UDID from NanoMDM\n- `profileIdentifier` (string, required): Profile identifier to remove (e.g. com.sitesafe.camera.restriction)\n\n**Response:** 200 OK with command UUID tracking the removal operation\n\n**Note:** The local DevicePolicy record is marked inactive (not deleted)."
+          },
+          "response": [
+            {
+              "name": "Success - Profile Removed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile removed successfully\",\n  \"data\": {\n    \"command_uuid\": \"cmd-def01234-5678-9abc-def0-123456789abc\",\n    \"command_type\": \"RemoveProfile\",\n    \"udid\": \"00000000-0000-0000-0000-000000000001\",\n    \"profile_identifier\": \"com.sitesafe.camera.restriction\",\n    \"status\": \"sent\"\n  }\n}"
+            },
+            {
+              "name": "Error - Validation Failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation error\",\n  \"errors\": [\n    \"Device UDID is required\",\n    \"Profile identifier is required\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "List MDM Commands",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/mdm/commands?page=1&limit=20&status=sent&commandType=InstallProfile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "mdm", "commands"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Records per page (default: 20, max: 100)"
+                },
+                {
+                  "key": "status",
+                  "value": "sent",
+                  "description": "Filter by status: queued, sent, acknowledged, failed"
+                },
+                {
+                  "key": "commandType",
+                  "value": "InstallProfile",
+                  "description": "Filter by command type: InstallProfile, RemoveProfile, DeviceInformation, etc."
+                },
+                {
+                  "key": "deviceIdentifier",
+                  "value": "",
+                  "description": "Filter by device UDID"
+                }
+              ]
+            },
+            "description": "List MDM commands with pagination and optional filters.\n\n**Authentication:** Required (super_admin only)\n\n**Query Parameters:**\n- `page` (integer, default=1): Page number\n- `limit` (integer, default=20, max=100): Records per page\n- `status` (string, optional): Filter by status — `queued`, `sent`, `acknowledged`, `failed`\n- `commandType` (string, optional): Filter by command type — `InstallProfile`, `RemoveProfile`, `DeviceInformation`, etc.\n- `deviceIdentifier` (string, optional): Filter by device UDID\n\n**Response:** 200 OK with paginated command list\n\n**Command Status Lifecycle:** `queued` → `sent` → `acknowledged` | `failed`"
+          },
+          "response": [
+            {
+              "name": "Success - Commands Listed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ]
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"MDM commands retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"cmd-uuid-001\",\n      \"commandUuid\": \"cmd-789abc-def0-1234-5678-90abcdef1234\",\n      \"deviceId\": \"660e8400-e29b-41d4-a716-446655440001\",\n      \"deviceIdentifier\": \"00000000-0000-0000-0000-000000000001\",\n      \"commandType\": \"InstallProfile\",\n      \"status\": \"acknowledged\",\n      \"requestPayload\": {\n        \"udid\": \"00000000-0000-0000-0000-000000000001\",\n        \"profile_payload\": {}\n      },\n      \"responseData\": {\n        \"command_uuid\": \"cmd-789abc-def0-1234-5678-90abcdef1234\"\n      },\n      \"errorMessage\": null,\n      \"retryCount\": 0,\n      \"maxRetries\": 3,\n      \"queuedAt\": \"2026-07-13T05:00:00.000Z\",\n      \"sentAt\": \"2026-07-13T05:00:01.000Z\",\n      \"acknowledgedAt\": \"2026-07-13T05:05:00.000Z\",\n      \"failedAt\": null,\n      \"createdAt\": \"2026-07-13T05:00:00.000Z\",\n      \"updatedAt\": \"2026-07-13T05:05:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"total\": 42,\n    \"page\": 1,\n    \"limit\": 20\n  }\n}"
             }
           ]
         }

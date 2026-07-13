@@ -84,6 +84,12 @@ const NOTIFICATION_TYPES = {
   CAMERA_BLOCK: 'camera_block',
   CAMERA_UNBLOCK: 'camera_unblock',
   DEVICE_POLICY_UPDATE: 'device_policy_update',
+  MDM_COMMAND_SUCCESS: 'mdm_command_success',
+  MDM_COMMAND_FAILURE: 'mdm_command_failure',
+  MDM_PROFILE_INSTALLED: 'mdm_profile_installed',
+  MDM_PROFILE_REMOVED: 'mdm_profile_removed',
+  MDM_DEVICE_OFFLINE: 'mdm_device_offline',
+  MDM_DEVICE_ONLINE: 'mdm_device_online',
 };
 
 // Notification Status
@@ -118,6 +124,29 @@ const ENTITY_TYPES = {
   DEVICE_POLICY: 'DevicePolicy',
 };
 
+// MDM Audit Action Types
+const MDM_AUDIT_ACTIONS = {
+  GET_DEVICES: 'nanomdm_get_devices',
+  GET_DEVICE: 'nanomdm_get_device',
+  GET_PROFILES: 'nanomdm_get_profiles',
+  GET_PROFILE: 'nanomdm_get_profile',
+  CREATE_PROFILE: 'nanomdm_create_profile',
+  UPDATE_PROFILE: 'nanomdm_update_profile',
+  DELETE_PROFILE: 'nanomdm_delete_profile',
+  INSTALL_PROFILE: 'nanomdm_install_profile',
+  REMOVE_PROFILE: 'nanomdm_remove_profile',
+  SEND_COMMAND: 'nanomdm_send_command',
+  GET_COMMAND: 'nanomdm_get_command',
+  GET_COMMANDS: 'nanomdm_get_commands',
+};
+
+// MDM Entity Types
+const MDM_ENTITY_TYPES = {
+  DEVICE: 'MDM_DEVICE',
+  PROFILE: 'MDM_PROFILE',
+  COMMAND: 'MDM_COMMAND',
+};
+
 module.exports = {
   HTTP_STATUS,
   ERROR_CODES,
@@ -131,4 +160,6 @@ module.exports = {
   PUNCH_TYPES,
   AUDIT_ACTION_TYPES,
   ENTITY_TYPES,
+  MDM_AUDIT_ACTIONS,
+  MDM_ENTITY_TYPES,
 };

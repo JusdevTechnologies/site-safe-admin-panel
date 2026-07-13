@@ -11,6 +11,7 @@ const DeviceController = require('../controllers/DeviceController');
 const UserController = require('../controllers/UserController');
 const OtpController = require('../controllers/OtpController');
 const EmployeeController = require('../controllers/EmployeeController');
+const MDMController = require('../controllers/MDMController');
 
 // Import validators
 const AdminValidator = require('../validators/AdminValidator');
@@ -313,6 +314,69 @@ router.delete(
   authenticate,
   authorize('super_admin'),
   EmployeeController.deleteEmployee.bind(EmployeeController),
+);
+
+/**
+ * ============================================
+ * MDM MANAGEMENT ROUTES (Protected)
+ * ============================================
+ */
+
+/**
+ * Get MDM Devices from NanoMDM
+ * GET /api/v1/admin/mdm/devices
+ */
+router.get(
+  '/admin/mdm/devices',
+  authenticate,
+  authorize('super_admin'),
+  MDMController.getDevices.bind(MDMController),
+);
+
+/**
+ * Get MDM Profiles from NanoMDM
+ * GET /api/v1/admin/mdm/profiles
+ */
+router.get(
+  '/admin/mdm/profiles',
+  authenticate,
+  authorize('super_admin'),
+  MDMController.getProfiles.bind(MDMController),
+);
+
+/**
+ * Install Profile on Device
+ * POST /api/v1/admin/mdm/profile/install
+ */
+router.post(
+  '/admin/mdm/profile/install',
+  authenticate,
+  authorize('super_admin'),
+  validateRequest(AdminValidator.mdmInstallProfileSchema()),
+  MDMController.installProfile.bind(MDMController),
+);
+
+/**
+ * Remove Profile from Device
+ * POST /api/v1/admin/mdm/profile/remove
+ */
+router.post(
+  '/admin/mdm/profile/remove',
+  authenticate,
+  authorize('super_admin'),
+  validateRequest(AdminValidator.mdmRemoveProfileSchema()),
+  MDMController.removeProfile.bind(MDMController),
+);
+
+/**
+ * Get MDM Commands
+ * GET /api/v1/admin/mdm/commands
+ */
+router.get(
+  '/admin/mdm/commands',
+  authenticate,
+  authorize('super_admin'),
+  MDMController.getCommands.bind(MDMController),
 );
 
 /**

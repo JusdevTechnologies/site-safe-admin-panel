@@ -6,6 +6,7 @@ const app = require('../src/app');
 const environment = require('../config/environment');
 const logger = require('../src/utils/logger');
 const db = require('../src/models');
+const SyncScheduler = require('../src/scheduler/SyncScheduler');
 
 const port = environment.port;
 
@@ -21,27 +22,27 @@ db.sequelize
       logger.info(`Environment: ${environment.nodeEnv}`);
     });
 
-    // Graceful shutdown
-    process.on('SIGINT', () => {
-      logger.info('SIGINT received, shutting down gracefully');
-      server.close(() => {
-        logger.info('Server closed');
-        db.sequelize.close();
-        process.exit(0);
-      });
-    });
+    // Start background sync scheduler
+    const scheduler = new SyncScheduler();
+    scheduler.start();
 
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received, shutting down gracefully');
+    // Graceful shutdown
+    const shutdown = async (signal) => {
+      logger.info(`${signal} received, shutting down gracefully`);
+
+      await scheduler.stop();
+
       server.close(() => {
         logger.info('Server closed');
         db.sequelize.close();
         process.exit(0);
       });
-    });
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
   })
   .catch((err) => {
     logger.error('Error syncing database:', err);
     process.exit(1);
   });
-

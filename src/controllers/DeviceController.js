@@ -1,5 +1,5 @@
 const DeviceService = require('../services/DeviceService');
-const logger = require('../utils/logger');
+const CameraRestrictionService = require('../services/CameraRestrictionService');
 const { formatResponse, paginate } = require('../utils/helpers');
 
 class DeviceController {
@@ -33,9 +33,8 @@ class DeviceController {
         // Only apply camera filter when the query param is explicitly provided;
         // evaluating `undefined === 'true'` would yield `false` and permanently
         // restrict results to unblocked devices when no filter is intended.
-        cameraBlockedFilter: req.query.cameraBlocked !== undefined
-          ? req.query.cameraBlocked === 'true'
-          : undefined,
+        cameraBlockedFilter:
+          req.query.cameraBlocked !== undefined ? req.query.cameraBlocked === 'true' : undefined,
         os: req.query.os,
       };
 
@@ -57,9 +56,7 @@ class DeviceController {
     try {
       const device = await DeviceService.getDeviceById(req.params.id);
 
-      res.status(200).json(
-        formatResponse(device, 'Device retrieved successfully'),
-      );
+      res.status(200).json(formatResponse(device, 'Device retrieved successfully'));
     } catch (error) {
       next(error);
     }
@@ -73,15 +70,9 @@ class DeviceController {
     try {
       const { reason } = req.body;
 
-      const device = await DeviceService.blockDeviceCamera(
-        req.params.id,
-        req.user.id,
-        reason,
-      );
+      const device = await CameraRestrictionService.blockCamera(req.params.id, req.user.id, reason);
 
-      res.status(200).json(
-        formatResponse(device, 'Device camera blocked successfully'),
-      );
+      res.status(200).json(formatResponse(device, 'Device camera blocked successfully'));
     } catch (error) {
       next(error);
     }
@@ -95,15 +86,13 @@ class DeviceController {
     try {
       const { reason } = req.body;
 
-      const device = await DeviceService.unblockDeviceCamera(
+      const device = await CameraRestrictionService.unblockCamera(
         req.params.id,
         req.user.id,
         reason,
       );
 
-      res.status(200).json(
-        formatResponse(device, 'Device camera unblocked successfully'),
-      );
+      res.status(200).json(formatResponse(device, 'Device camera unblocked successfully'));
     } catch (error) {
       next(error);
     }
@@ -115,9 +104,7 @@ class DeviceController {
 
       const device = await DeviceService.updateCameraStatus(req.params.id, cameraBlocked);
 
-      res.status(200).json(
-        formatResponse(device, 'Camera status updated successfully'),
-      );
+      res.status(200).json(formatResponse(device, 'Camera status updated successfully'));
     } catch (error) {
       next(error);
     }
@@ -127,9 +114,7 @@ class DeviceController {
     try {
       await DeviceService.deleteDevice(req.params.id);
 
-      res.status(200).json(
-        formatResponse(null, 'Device deleted successfully'),
-      );
+      res.status(200).json(formatResponse(null, 'Device deleted successfully'));
     } catch (error) {
       next(error);
     }
@@ -139,9 +124,7 @@ class DeviceController {
     try {
       const policies = await DeviceService.getDevicePolicies(req.params.id);
 
-      res.status(200).json(
-        formatResponse(policies, 'Device policies retrieved successfully'),
-      );
+      res.status(200).json(formatResponse(policies, 'Device policies retrieved successfully'));
     } catch (error) {
       next(error);
     }

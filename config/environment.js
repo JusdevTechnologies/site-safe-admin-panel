@@ -60,10 +60,19 @@ module.exports = {
     privateKey: process.env.FIREBASE_PRIVATE_KEY || '',
   },
 
-  // MDM
+  // MDM (MicroMDM)
   mdm: {
     baseUrl: process.env.MDM_BASE_URL,
     apiKey: process.env.MDM_API_KEY,
+  },
+
+  // NanoMDM
+  nanomdm: {
+    baseUrl: process.env.NANOMDM_BASE_URL,
+    authType: process.env.NANOMDM_AUTH_TYPE || 'api_key',
+    apiKey: process.env.NANOMDM_API_KEY,
+    bearerToken: process.env.NANOMDM_BEARER_TOKEN || '',
+    timeout: parseInt(process.env.NANOMDM_TIMEOUT, 10) || 30000,
   },
 
   // Access Management
