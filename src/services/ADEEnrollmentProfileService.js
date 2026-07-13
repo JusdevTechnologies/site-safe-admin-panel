@@ -11,10 +11,7 @@ class ADEEnrollmentProfileService {
     logger.info('[ADEProfile] Creating enrollment profile');
 
     if (data.isDefault) {
-      await db.EnrollmentProfile.update(
-        { is_default: false },
-        { where: { is_default: true } },
-      );
+      await db.EnrollmentProfile.update({ is_default: false }, { where: { is_default: true } });
     }
 
     const profileUuid = uuidv4();
@@ -24,7 +21,8 @@ class ADEEnrollmentProfileService {
       display_name: data.displayName,
       description: data.description || null,
       organization: data.organization || environment.ade.organization,
-      organization_display_name: data.organizationDisplayName || environment.ade.organizationDisplayName || null,
+      organization_display_name:
+        data.organizationDisplayName || environment.ade.organizationDisplayName || null,
       department: data.department || environment.ade.department || null,
       url: data.url || environment.ade.profileUrl,
       checkin_url: data.checkinUrl || environment.ade.checkinUrl || null,
@@ -34,21 +32,33 @@ class ADEEnrollmentProfileService {
       is_active: data.isActive !== undefined ? data.isActive : true,
       is_mandatory: data.isMandatory !== undefined ? data.isMandatory : environment.ade.isMandatory,
       supervised: data.supervised !== undefined ? data.supervised : environment.ade.supervised,
-      allow_profile_removal: data.allowProfileRemoval !== undefined ? data.allowProfileRemoval : environment.ade.allowProfileRemoval,
-      await_device_configured: data.awaitDeviceConfigured !== undefined ? data.awaitDeviceConfigured : environment.ade.awaitDeviceConfigured,
+      allow_profile_removal:
+        data.allowProfileRemoval !== undefined
+          ? data.allowProfileRemoval
+          : environment.ade.allowProfileRemoval,
+      await_device_configured:
+        data.awaitDeviceConfigured !== undefined
+          ? data.awaitDeviceConfigured
+          : environment.ade.awaitDeviceConfigured,
       language: data.language || environment.ade.language || null,
       region: data.region || environment.ade.region || null,
       support_contact: data.supportContact || environment.ade.supportContact || null,
       support_email: data.supportEmail || environment.ade.supportEmail || null,
       support_phone: data.supportPhone || environment.ade.supportPhone || null,
-      identity_certificate_uuid: data.identityCertificateUuid || environment.ade.identityCertificateUuid || null,
+      identity_certificate_uuid:
+        data.identityCertificateUuid || environment.ade.identityCertificateUuid || null,
       anchor_certificates: data.anchorCertificates || null,
       skip_setup_assistant_items: data.skipSetupAssistantItems || this._parseSkipItems(),
       configuration: data.configuration || null,
       metadata: data.metadata || null,
     });
 
-    await this._recordAudit('ade_profile_created', profileUuid, { displayName: data.displayName }, 'success');
+    await this._recordAudit(
+      'ade_profile_created',
+      profileUuid,
+      { displayName: data.displayName },
+      'success',
+    );
 
     logger.info(`[ADEProfile] Created profile ${profileUuid}: ${data.displayName}`);
     return this._formatProfile(profile);
@@ -80,7 +90,8 @@ class ADEEnrollmentProfileService {
     if (data.displayName !== undefined) updates.display_name = data.displayName;
     if (data.description !== undefined) updates.description = data.description;
     if (data.organization !== undefined) updates.organization = data.organization;
-    if (data.organizationDisplayName !== undefined) updates.organization_display_name = data.organizationDisplayName;
+    if (data.organizationDisplayName !== undefined)
+      updates.organization_display_name = data.organizationDisplayName;
     if (data.department !== undefined) updates.department = data.department;
     if (data.url !== undefined) updates.url = data.url;
     if (data.checkinUrl !== undefined) updates.checkin_url = data.checkinUrl;
@@ -90,16 +101,21 @@ class ADEEnrollmentProfileService {
     if (data.isActive !== undefined) updates.is_active = data.isActive;
     if (data.isMandatory !== undefined) updates.is_mandatory = data.isMandatory;
     if (data.supervised !== undefined) updates.supervised = data.supervised;
-    if (data.allowProfileRemoval !== undefined) updates.allow_profile_removal = data.allowProfileRemoval;
-    if (data.awaitDeviceConfigured !== undefined) updates.await_device_configured = data.awaitDeviceConfigured;
+    if (data.allowProfileRemoval !== undefined)
+      updates.allow_profile_removal = data.allowProfileRemoval;
+    if (data.awaitDeviceConfigured !== undefined)
+      updates.await_device_configured = data.awaitDeviceConfigured;
     if (data.language !== undefined) updates.language = data.language;
     if (data.region !== undefined) updates.region = data.region;
     if (data.supportContact !== undefined) updates.support_contact = data.supportContact;
     if (data.supportEmail !== undefined) updates.support_email = data.supportEmail;
     if (data.supportPhone !== undefined) updates.support_phone = data.supportPhone;
-    if (data.identityCertificateUuid !== undefined) updates.identity_certificate_uuid = data.identityCertificateUuid;
-    if (data.anchorCertificates !== undefined) updates.anchor_certificates = data.anchorCertificates;
-    if (data.skipSetupAssistantItems !== undefined) updates.skip_setup_assistant_items = data.skipSetupAssistantItems;
+    if (data.identityCertificateUuid !== undefined)
+      updates.identity_certificate_uuid = data.identityCertificateUuid;
+    if (data.anchorCertificates !== undefined)
+      updates.anchor_certificates = data.anchorCertificates;
+    if (data.skipSetupAssistantItems !== undefined)
+      updates.skip_setup_assistant_items = data.skipSetupAssistantItems;
     if (data.configuration !== undefined) updates.configuration = data.configuration;
     if (data.metadata !== undefined) updates.metadata = data.metadata;
 
@@ -170,12 +186,19 @@ class ADEEnrollmentProfileService {
       await enrollment.update({ profile_uuid: resolvedProfile.profile_uuid });
     }
 
-    logger.info(`[ADEProfile] Resolved profile ${resolvedProfile.profile_uuid} for device ${serialNumber}`);
+    logger.info(
+      `[ADEProfile] Resolved profile ${resolvedProfile.profile_uuid} for device ${serialNumber}`,
+    );
 
-    await this._recordAudit('ade_profile_resolved', resolvedProfile.profile_uuid, {
-      serialNumber,
-      resolutionStrategy: 'rules',
-    }, 'success');
+    await this._recordAudit(
+      'ade_profile_resolved',
+      resolvedProfile.profile_uuid,
+      {
+        serialNumber,
+        resolutionStrategy: 'rules',
+      },
+      'success',
+    );
 
     return this._formatProfile(resolvedProfile);
   }
@@ -197,9 +220,12 @@ class ADEEnrollmentProfileService {
 
       if (modelProfile) {
         const modelConfig = modelProfile.configuration;
-        if (modelConfig && modelConfig.applicableModels &&
-            Array.isArray(modelConfig.applicableModels) &&
-            modelConfig.applicableModels.includes(enrollment.model)) {
+        if (
+          modelConfig &&
+          modelConfig.applicableModels &&
+          Array.isArray(modelConfig.applicableModels) &&
+          modelConfig.applicableModels.includes(enrollment.model)
+        ) {
           return modelProfile;
         }
       }
@@ -241,14 +267,21 @@ class ADEEnrollmentProfileService {
       });
     }
 
-    const mobileconfig = ADEProfileGenerator.generateMobileconfig(profile, enrollment);
+    const mobileconfig = await ADEProfileGenerator.generateMobileconfig(profile, enrollment);
 
-    await this._recordAudit('ade_profile_generated', profile.profileUuid, {
-      serialNumber,
-      profileVersion: profile.version,
-    }, 'success');
+    await this._recordAudit(
+      'ade_profile_generated',
+      profile.profileUuid,
+      {
+        serialNumber,
+        profileVersion: profile.version,
+      },
+      'success',
+    );
 
-    logger.info(`[ADEProfile] Generated .mobileconfig for ${serialNumber} using profile ${profile.profileUuid}`);
+    logger.info(
+      `[ADEProfile] Generated .mobileconfig for ${serialNumber} using profile ${profile.profileUuid}`,
+    );
 
     return {
       profile,
@@ -324,7 +357,10 @@ class ADEEnrollmentProfileService {
   _parseSkipItems() {
     const raw = environment.ade.skipSetupItems;
     if (!raw) return null;
-    return raw.split(',').map((s) => s.trim()).filter(Boolean);
+    return raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
 
   async _recordAudit(action, entityId, metadata, status) {

@@ -132,6 +132,11 @@ module.exports = {
 
     // Profile generation
     profileIdentifier: process.env.ADE_PROFILE_IDENTIFIER || 'com.kokken.mdm.enrollment',
+
+    // Certificate paths for profile generation
+    rootCaCertPath: process.env.ADE_ROOT_CA_CERT_PATH || '',
+    identityCertPath: process.env.ADE_IDENTITY_CERT_PATH || '',
+    identityCertPassword: process.env.ADE_IDENTITY_CERT_PASSWORD || '',
   },
 
   superAdmin: {
