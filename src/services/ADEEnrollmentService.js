@@ -40,14 +40,7 @@ class ADEEnrollmentService {
       await enrollment.update(updates);
     }
 
-    const localDevice = await db.Device.findOne({
-      where: { serial_number: serialNumber },
-      paranoid: false,
-    });
-
-    if (localDevice && !enrollment.device_id) {
-      await enrollment.update({ device_id: localDevice.id });
-    }
+    await this._linkDeviceRecord(enrollment, serialNumber);
 
     await this.recordEvent(
       serialNumber,
@@ -85,25 +78,39 @@ class ADEEnrollmentService {
     const updates = {};
     if (udid) updates.udid = udid;
     if (model) updates.model = model;
-    if (metadata) updates.metadata = { ...(enrollment.metadata || {}), ...metadata };
+    if (metadata) {
+      updates.metadata = { ...(enrollment.metadata || {}), ...metadata };
+    }
 
+    // Set timestamps based on status transitions
     if (status === ADE_ENROLLMENT_STATUS.CHECKIN_RECEIVED) {
-      const localDevice = await db.Device.findOne({
-        where: { serial_number: serialNumber },
-        paranoid: false,
-      });
+      await this._linkDeviceRecord(enrollment, serialNumber, udid);
+    }
 
-      if (localDevice && !enrollment.device_id) {
-        updates.device_id = localDevice.id;
-      }
+    if (status === ADE_ENROLLMENT_STATUS.PROFILE_GENERATED) {
+      updates.profile_generated_at = new Date();
+    }
 
-      if (udid && localDevice && !localDevice.device_identifier) {
-        await localDevice.update({ device_identifier: udid });
-      }
+    if (status === ADE_ENROLLMENT_STATUS.PROFILE_DELIVERED) {
+      updates.profile_delivered_at = new Date();
+    }
+
+    if (status === ADE_ENROLLMENT_STATUS.AUTHENTICATED) {
+      updates.authenticated_at = new Date();
+    }
+
+    if (status === ADE_ENROLLMENT_STATUS.DEVICE_CONFIGURED) {
+      updates.device_configured_at = new Date();
     }
 
     if (status === ADE_ENROLLMENT_STATUS.COMPLETED) {
       updates.completed_at = new Date();
+      logger.info(`[ADEEnrollment] Enrollment completed for ${serialNumber}`);
+    }
+
+    if (status === ADE_ENROLLMENT_STATUS.FAILED) {
+      updates.last_error = (metadata && metadata.error) || 'Enrollment failed';
+      updates.retry_count = db.Sequelize.literal('retry_count + 1');
     }
 
     if (Object.keys(updates).length > 0) {
@@ -122,6 +129,66 @@ class ADEEnrollmentService {
       status === ADE_ENROLLMENT_STATUS.FAILED ? 'failed' : 'success',
     );
 
+    return this._formatEnrollment(enrollment);
+  }
+
+  async handleDeviceConfigured({ serialNumber, udid, metadata }) {
+    logger.info(`[ADEEnrollment] DeviceConfigured received for ${serialNumber}`);
+
+    const enrollment = await db.AdeEnrollment.findOne({
+      where: { serial_number: serialNumber },
+      include: [
+        {
+          model: db.EnrollmentProfile,
+          required: false,
+        },
+      ],
+    });
+
+    if (!enrollment) {
+      throw new NotFoundError(`No enrollment found for serial ${serialNumber}`);
+    }
+
+    const profile = enrollment.EnrollmentProfile;
+    const shouldAwaitConfig = profile ? profile.await_device_configured : environment.ade.awaitDeviceConfigured;
+
+    // Set device_configured timestamp regardless
+    const updates = {
+      device_configured_at: new Date(),
+    };
+    if (udid) updates.udid = udid;
+    if (metadata) {
+      updates.metadata = { ...(enrollment.metadata || {}), deviceConfigured: metadata };
+    }
+
+    await enrollment.update(updates);
+
+    // If configured to await DeviceConfigured, transition to device_configured
+    // Then auto-complete if it can transition
+    try {
+      await this._transition(enrollment, ADE_ENROLLMENT_STATUS.DEVICE_CONFIGURED);
+
+      if (!shouldAwaitConfig) {
+        try {
+          await this._transition(enrollment, ADE_ENROLLMENT_STATUS.COMPLETED);
+          await enrollment.update({ completed_at: new Date() });
+          logger.info(`[ADEEnrollment] Auto-completed enrollment for ${serialNumber} (no await)`);
+        } catch (transError) {
+          logger.warn(`[ADEEnrollment] Could not auto-complete after DeviceConfigured: ${transError.message}`);
+        }
+      }
+    } catch (transError) {
+      logger.warn(`[ADEEnrollment] Could not transition to device_configured: ${transError.message}`);
+    }
+
+    await this.recordEvent(
+      serialNumber,
+      ADE_AUDIT_ACTIONS.DEVICE_CONFIGURED,
+      { enrollmentId: enrollment.id, shouldAwaitConfig },
+      'success',
+    );
+
+    logger.info(`[ADEEnrollment] DeviceConfigured processed for ${serialNumber}`);
     return this._formatEnrollment(enrollment);
   }
 
@@ -231,23 +298,41 @@ class ADEEnrollmentService {
 
     if (!allowedTransitions.includes(newStatus)) {
       throw new ValidationError(
-        `Invalid enrollment status transition from ${currentStatus} to ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`,
+        `Invalid enrollment status transition from ${currentStatus} to ${newStatus}. ` +
+        `Allowed transitions: ${allowedTransitions.join(', ')}`,
       );
     }
 
     await enrollment.update({ status: newStatus });
-    logger.info(
-      `[ADEEnrollment] Transitioned ${enrollment.serial_number}: ${currentStatus} -> ${newStatus}`,
-    );
+    logger.info(`[ADEEnrollment] Transitioned ${enrollment.serial_number}: ${currentStatus} -> ${newStatus}`);
+  }
+
+  async _linkDeviceRecord(enrollment, serialNumber, udid) {
+    const localDevice = await db.Device.findOne({
+      where: { serial_number: serialNumber },
+      paranoid: false,
+    });
+
+    if (localDevice && !enrollment.device_id) {
+      await enrollment.update({ device_id: localDevice.id });
+    }
+
+    if (udid && localDevice && !localDevice.device_identifier) {
+      await localDevice.update({ device_identifier: udid });
+    }
   }
 
   _mapStatusToAuditAction(status) {
     const map = {
       [ADE_ENROLLMENT_STATUS.PENDING]: AUDIT_ACTION_TYPES.CREATE,
       [ADE_ENROLLMENT_STATUS.ASSIGNED]: ADE_AUDIT_ACTIONS.DEVICE_ASSIGNED,
+      [ADE_ENROLLMENT_STATUS.PROFILE_GENERATED]: ADE_AUDIT_ACTIONS.PROFILE_GENERATED,
+      [ADE_ENROLLMENT_STATUS.PROFILE_DELIVERED]: ADE_AUDIT_ACTIONS.PROFILE_DELIVERED,
       [ADE_ENROLLMENT_STATUS.ENROLLMENT_STARTED]: ADE_AUDIT_ACTIONS.ENROLLMENT_STARTED,
+      [ADE_ENROLLMENT_STATUS.AUTHENTICATED]: ADE_AUDIT_ACTIONS.AUTHENTICATED,
       [ADE_ENROLLMENT_STATUS.CHECKIN_RECEIVED]: ADE_AUDIT_ACTIONS.CHECKIN_RECEIVED,
-      [ADE_ENROLLMENT_STATUS.MDM_CONNECTION]: ADE_AUDIT_ACTIONS.NANOMDM_SYNC,
+      [ADE_ENROLLMENT_STATUS.MDM_CONNECTION]: ADE_AUDIT_ACTIONS.MDM_CONNECTED,
+      [ADE_ENROLLMENT_STATUS.DEVICE_CONFIGURED]: ADE_AUDIT_ACTIONS.DEVICE_CONFIGURED,
       [ADE_ENROLLMENT_STATUS.COMPLETED]: ADE_AUDIT_ACTIONS.ENROLLMENT_COMPLETED,
       [ADE_ENROLLMENT_STATUS.FAILED]: ADE_AUDIT_ACTIONS.ENROLLMENT_FAILED,
     };
@@ -265,9 +350,15 @@ class ADEEnrollmentService {
       profileName: enrollment.EnrollmentProfile ? enrollment.EnrollmentProfile.display_name : null,
       organization: enrollment.organization,
       status: enrollment.status,
-      metadata: enrollment.metadata,
+      profileGeneratedAt: enrollment.profile_generated_at,
+      profileDeliveredAt: enrollment.profile_delivered_at,
+      authenticatedAt: enrollment.authenticated_at,
+      deviceConfiguredAt: enrollment.device_configured_at,
       enrolledAt: enrollment.enrolled_at,
       completedAt: enrollment.completed_at,
+      retryCount: enrollment.retry_count,
+      lastError: enrollment.last_error,
+      metadata: enrollment.metadata,
       createdAt: enrollment.created_at,
       updatedAt: enrollment.updated_at,
     };

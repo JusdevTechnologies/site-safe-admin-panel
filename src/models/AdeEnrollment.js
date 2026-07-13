@@ -43,16 +43,32 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM(
           'pending',
           'assigned',
+          'profile_generated',
+          'profile_delivered',
           'enrollment_started',
+          'authenticated',
           'checkin_received',
           'mdm_connection',
+          'device_configured',
           'completed',
           'failed',
         ),
         defaultValue: 'pending',
       },
-      metadata: {
-        type: DataTypes.JSON,
+      profile_generated_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      profile_delivered_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      authenticated_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      device_configured_at: {
+        type: DataTypes.DATE,
         allowNull: true,
       },
       enrolled_at: {
@@ -61,6 +77,18 @@ module.exports = (sequelize, DataTypes) => {
       },
       completed_at: {
         type: DataTypes.DATE,
+        allowNull: true,
+      },
+      retry_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
+      last_error: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      metadata: {
+        type: DataTypes.JSON,
         allowNull: true,
       },
     },

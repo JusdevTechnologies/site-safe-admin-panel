@@ -33,6 +33,20 @@ class ADEEnrollmentController {
     }
   }
 
+  async handleDeviceConfigured(req, res, next) {
+    try {
+      const { serialNumber, udid, metadata } = req.body;
+      const result = await ADEEnrollmentService.handleDeviceConfigured({
+        serialNumber,
+        udid,
+        metadata,
+      });
+      res.status(200).json(formatResponse(result, 'DeviceConfigured processed'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getEnrollment(req, res, next) {
     try {
       const { id } = req.params;

@@ -2,6 +2,7 @@ const db = require('../models');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
 const ADEEnrollmentService = require('./ADEEnrollmentService');
+const { ADE_ENROLLMENT_STATUS } = require('../constants');
 
 class ADEDeviceService {
   async lookupDevice({ serialNumber, model, udid }) {
@@ -22,9 +23,7 @@ class ADEDeviceService {
     });
 
     if (!enrollment) {
-      logger.info(
-        `[ADEDevice] Device not found, creating new enrollment for serial: ${serialNumber}`,
-      );
+      logger.info(`[ADEDevice] Device not found, creating new enrollment for serial: ${serialNumber}`);
 
       const defaultProfile = await db.EnrollmentProfile.findOne({
         where: { is_default: true, is_active: true },
@@ -35,13 +34,11 @@ class ADEDeviceService {
         udid: udid || null,
         model: model || null,
         organization: environment.ade.organization,
-        status: 'pending',
+        status: ADE_ENROLLMENT_STATUS.PENDING,
         profile_uuid: defaultProfile ? defaultProfile.profile_uuid : null,
       });
 
-      logger.info(
-        `[ADEDevice] Created new enrollment ${enrollment.id} for serial: ${serialNumber}`,
-      );
+      logger.info(`[ADEDevice] Created new enrollment ${enrollment.id} for serial: ${serialNumber}`);
 
       await ADEEnrollmentService.recordEvent(
         serialNumber,
@@ -109,8 +106,14 @@ class ADEDeviceService {
       profileName: enrollment.EnrollmentProfile ? enrollment.EnrollmentProfile.display_name : null,
       deviceId: localDevice ? localDevice.id : null,
       deviceIdentifier: localDevice ? localDevice.device_identifier : null,
+      profileGeneratedAt: enrollment.profile_generated_at,
+      profileDeliveredAt: enrollment.profile_delivered_at,
+      authenticatedAt: enrollment.authenticated_at,
+      deviceConfiguredAt: enrollment.device_configured_at,
       enrolledAt: enrollment.enrolled_at,
       completedAt: enrollment.completed_at,
+      retryCount: enrollment.retry_count,
+      lastError: enrollment.last_error,
       createdAt: enrollment.created_at,
       updatedAt: enrollment.updated_at,
     };

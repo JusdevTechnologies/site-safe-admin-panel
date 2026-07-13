@@ -76,6 +76,29 @@ class ADEEnrollmentProfileController {
       next(error);
     }
   }
+
+  async generateProfileForDevice(req, res, next) {
+    try {
+      const { serialNumber } = req.body;
+      const result = await ADEEnrollmentProfileService.generateProfileForDevice(serialNumber);
+      res.status(200).json(formatResponse(result, 'Profile generated for device'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async downloadProfile(req, res, next) {
+    try {
+      const { serialNumber } = req.body;
+      const result = await ADEEnrollmentProfileService.generateProfileForDevice(serialNumber);
+
+      res.set('Content-Type', result.mimeType);
+      res.set('Content-Disposition', `attachment; filename="enrollment_${serialNumber}.mobileconfig"`);
+      res.send(result.mobileconfig);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new ADEEnrollmentProfileController();
