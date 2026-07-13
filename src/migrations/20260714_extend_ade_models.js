@@ -26,140 +26,98 @@ module.exports = {
     // ============================================
     // 2. Extend enrollment_profiles table
     // ============================================
-    await queryInterface.addColumn('enrollment_profiles', 'organization_display_name', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Display name shown during enrollment',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'department', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Department or division name',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'checkin_url', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'MDM check-in URL for NanoMDM',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'topic', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'APNs topic for push notifications',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'is_mandatory', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: true,
-      comment: 'Whether enrollment is mandatory',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'supervised', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: true,
-      comment: 'Whether device should be supervised',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'allow_profile_removal', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false,
-      comment: 'Whether user can remove MDM profile',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'await_device_configured', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: true,
-      comment: 'Wait for DeviceConfigured before completing',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'language', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Primary language for enrollment',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'region', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Region for enrollment',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'support_contact', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'IT support contact name',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'support_email', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'IT support email address',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'support_phone', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'IT support phone number',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'identity_certificate_uuid', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'UUID of the identity certificate for MDM',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'anchor_certificates', {
-      type: Sequelize.JSON,
-      allowNull: true,
-      comment: 'Array of anchor certificate UUIDs',
-    });
-
-    await queryInterface.addColumn('enrollment_profiles', 'skip_setup_assistant_items', {
-      type: Sequelize.JSON,
-      allowNull: true,
-      comment: 'Array of Setup Assistant panels to skip',
-    });
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "organization_display_name" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "department" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "checkin_url" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "topic" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "is_mandatory" BOOLEAN DEFAULT true;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "supervised" BOOLEAN DEFAULT true;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "allow_profile_removal" BOOLEAN DEFAULT false;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "await_device_configured" BOOLEAN DEFAULT true;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "language" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "region" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "support_contact" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "support_email" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "support_phone" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "identity_certificate_uuid" VARCHAR(255);
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "anchor_certificates" JSON;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "enrollment_profiles"
+      ADD COLUMN IF NOT EXISTS "skip_setup_assistant_items" JSON;
+    `);
 
     // ============================================
     // 3. Extend ade_enrollments table
     // ============================================
-    await queryInterface.addColumn('ade_enrollments', 'profile_generated_at', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: 'When the enrollment profile was generated',
-    });
-
-    await queryInterface.addColumn('ade_enrollments', 'profile_delivered_at', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: 'When the enrollment profile was delivered',
-    });
-
-    await queryInterface.addColumn('ade_enrollments', 'authenticated_at', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: 'When the device authenticated with MDM',
-    });
-
-    await queryInterface.addColumn('ade_enrollments', 'device_configured_at', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: 'When Setup Assistant completed (DeviceConfigured)',
-    });
-
-    await queryInterface.addColumn('ade_enrollments', 'retry_count', {
-      type: Sequelize.INTEGER,
-      defaultValue: 0,
-      comment: 'Number of retry attempts',
-    });
-
-    await queryInterface.addColumn('ade_enrollments', 'last_error', {
-      type: Sequelize.TEXT,
-      allowNull: true,
-      comment: 'Last error message from enrollment',
-    });
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "ade_enrollments"
+      ADD COLUMN IF NOT EXISTS "profile_generated_at" TIMESTAMP WITH TIME ZONE;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "ade_enrollments"
+      ADD COLUMN IF NOT EXISTS "profile_delivered_at" TIMESTAMP WITH TIME ZONE;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "ade_enrollments"
+      ADD COLUMN IF NOT EXISTS "authenticated_at" TIMESTAMP WITH TIME ZONE;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "ade_enrollments"
+      ADD COLUMN IF NOT EXISTS "device_configured_at" TIMESTAMP WITH TIME ZONE;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "ade_enrollments"
+      ADD COLUMN IF NOT EXISTS "retry_count" INTEGER DEFAULT 0;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE "ade_enrollments"
+      ADD COLUMN IF NOT EXISTS "last_error" TEXT;
+    `);
 
     // ============================================
     // 4. Create ade_device_assignments table
@@ -251,12 +209,14 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('ade_device_assignments', ['serial_number'], {
-      name: 'ade_device_assignments_serial_number_index',
-    });
-    await queryInterface.addIndex('ade_device_assignments', ['sync_status'], {
-      name: 'ade_device_assignments_sync_status_index',
-    });
+    await queryInterface.sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "ade_device_assignments_serial_number_index"
+      ON "ade_device_assignments" ("serial_number");
+    `);
+    await queryInterface.sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "ade_device_assignments_sync_status_index"
+      ON "ade_device_assignments" ("sync_status");
+    `);
 
     // ============================================
     // 5. Create certificate_metadata table
@@ -338,12 +298,14 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('certificate_metadata', ['uuid'], {
-      name: 'certificate_metadata_uuid_index',
-    });
-    await queryInterface.addIndex('certificate_metadata', ['certificate_type'], {
-      name: 'certificate_metadata_certificate_type_index',
-    });
+    await queryInterface.sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "certificate_metadata_uuid_index"
+      ON "certificate_metadata" ("uuid");
+    `);
+    await queryInterface.sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "certificate_metadata_certificate_type_index"
+      ON "certificate_metadata" ("certificate_type");
+    `);
   },
 
   async down(queryInterface, _Sequelize) {
