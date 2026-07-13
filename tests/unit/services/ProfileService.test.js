@@ -1,11 +1,6 @@
 jest.mock('../../../src/integrations/NanoMDMService', () => ({
-  createProfile: jest.fn(),
-  updateProfile: jest.fn(),
-  deleteProfile: jest.fn(),
-  installProfile: jest.fn(),
-  removeProfile: jest.fn(),
-  getProfiles: jest.fn(),
-  getProfile: jest.fn(),
+  enqueueCommand: jest.fn(),
+  sendPush: jest.fn(),
 }));
 
 jest.mock('../../../src/models', () => ({
@@ -15,6 +10,7 @@ jest.mock('../../../src/models', () => ({
   DevicePolicy: {
     findOne: jest.fn(),
     create: jest.fn(),
+    findAll: jest.fn(),
   },
 }));
 
@@ -34,48 +30,40 @@ const validProfileData = {
   PayloadDescription: 'Restricts camera access',
 };
 
+const mockDeviceWithEnrollment = {
+  id: 'device-uuid-1',
+  device_identifier: 'UDID-001',
+  device_name: 'Test iPhone',
+  serial_number: 'SN-123',
+  device_info: {
+    nanomdm_enrollment_id: 'enr-abc-123',
+  },
+};
+
 describe('ProfileService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('createProfile', () => {
-    it('creates a profile via NanoMDMService and formats the result', async () => {
-      const nanoResult = { profile_uuid: 'prof-123' };
-      NanoMDMService.createProfile.mockResolvedValue(nanoResult);
-
+    it('acknowledges profile creation locally', async () => {
       const result = await ProfileService.createProfile(validProfileData);
 
-      expect(NanoMDMService.createProfile).toHaveBeenCalledWith(validProfileData);
       expect(result).toEqual({
         identifier: 'com.example.camera.restriction',
         organization: 'SiteSafe',
         description: 'Restricts camera access',
         displayName: 'Camera Restriction Profile',
-        profile_uuid: 'prof-123',
       });
-    });
-
-    it('passes validation errors from NanoMDMService', async () => {
-      NanoMDMService.createProfile.mockRejectedValue(
-        new Error('Profile must include a PayloadIdentifier'),
-      );
-
-      await expect(ProfileService.createProfile({ PayloadContent: {} })).rejects.toThrow(
-        'Profile must include a PayloadIdentifier',
-      );
     });
   });
 
   describe('updateProfile', () => {
     const updateData = { PayloadDisplayName: 'Updated' };
 
-    it('updates a profile via NanoMDMService', async () => {
-      NanoMDMService.updateProfile.mockResolvedValue({});
-
+    it('acknowledges profile update locally', async () => {
       const result = await ProfileService.updateProfile('com.example.profile', updateData);
 
-      expect(NanoMDMService.updateProfile).toHaveBeenCalledWith('com.example.profile', updateData);
       expect(result.identifier).toBe('com.example.profile');
     });
 
@@ -85,13 +73,10 @@ describe('ProfileService', () => {
   });
 
   describe('deleteProfile', () => {
-    it('deletes a profile via NanoMDMService', async () => {
-      NanoMDMService.deleteProfile.mockResolvedValue({ deleted: true });
-
+    it('acknowledges profile deletion locally', async () => {
       const result = await ProfileService.deleteProfile('com.example.profile');
 
-      expect(NanoMDMService.deleteProfile).toHaveBeenCalledWith('com.example.profile');
-      expect(result).toEqual({ deleted: true });
+      expect(result).toEqual({ deleted: true, identifier: 'com.example.profile' });
     });
 
     it('throws when identifier is missing', async () => {
@@ -106,15 +91,21 @@ describe('ProfileService', () => {
       PayloadContent: {},
     };
 
-    it('assigns profile to device and creates DevicePolicy record', async () => {
-      NanoMDMService.installProfile.mockResolvedValue({ command_uuid: 'cmd-123' });
-      db.Device.findOne.mockResolvedValue({ id: 'device-uuid-1' });
+    it('enqueues InstallProfile via NanoMDM and creates DevicePolicy record', async () => {
+      NanoMDMService.enqueueCommand.mockResolvedValue({ command_uuid: 'cmd-123' });
+      NanoMDMService.sendPush.mockResolvedValue({ status: 'pushed' });
+      db.Device.findOne.mockResolvedValue(mockDeviceWithEnrollment);
       db.DevicePolicy.findOne.mockResolvedValue(null);
       db.DevicePolicy.create.mockResolvedValue({ id: 'policy-uuid-1' });
 
       const result = await ProfileService.assignProfile(udid, profilePayload);
 
-      expect(NanoMDMService.installProfile).toHaveBeenCalledWith(udid, profilePayload);
+      expect(NanoMDMService.enqueueCommand).toHaveBeenCalledWith('enr-abc-123', {
+        command: 'InstallProfile',
+        device_udids: ['UDID-001'],
+        profile: profilePayload,
+      });
+      expect(NanoMDMService.sendPush).toHaveBeenCalledWith('enr-abc-123');
       expect(db.Device.findOne).toHaveBeenCalledWith({
         where: { device_identifier: udid },
         paranoid: false,
@@ -129,19 +120,30 @@ describe('ProfileService', () => {
       expect(result).toEqual({ command_uuid: 'cmd-123' });
     });
 
-    it('does not create DevicePolicy when device is not found locally', async () => {
-      NanoMDMService.installProfile.mockResolvedValue({ command_uuid: 'cmd-123' });
+    it('throws NotFoundError when device is not found locally', async () => {
       db.Device.findOne.mockResolvedValue(null);
 
-      const result = await ProfileService.assignProfile(udid, profilePayload);
+      await expect(ProfileService.assignProfile(udid, profilePayload)).rejects.toThrow(
+        NotFoundError,
+      );
+      expect(NanoMDMService.enqueueCommand).not.toHaveBeenCalled();
+    });
 
-      expect(db.DevicePolicy.create).not.toHaveBeenCalled();
-      expect(result).toEqual({ command_uuid: 'cmd-123' });
+    it('throws when device has no enrollment ID', async () => {
+      db.Device.findOne.mockResolvedValue({
+        ...mockDeviceWithEnrollment,
+        device_info: {},
+      });
+
+      await expect(ProfileService.assignProfile(udid, profilePayload)).rejects.toThrow(
+        'No NanoMDM enrollment ID found',
+      );
+      expect(NanoMDMService.enqueueCommand).not.toHaveBeenCalled();
     });
 
     it('throws ConflictError when profile is already assigned', async () => {
-      NanoMDMService.installProfile.mockResolvedValue({ command_uuid: 'cmd-123' });
-      db.Device.findOne.mockResolvedValue({ id: 'device-uuid-1' });
+      NanoMDMService.enqueueCommand.mockResolvedValue({ command_uuid: 'cmd-123' });
+      db.Device.findOne.mockResolvedValue(mockDeviceWithEnrollment);
       db.DevicePolicy.findOne.mockResolvedValue({ id: 'existing-policy' });
 
       await expect(ProfileService.assignProfile(udid, profilePayload)).rejects.toThrow(
@@ -164,43 +166,62 @@ describe('ProfileService', () => {
     it('throws when PayloadIdentifier is missing', async () => {
       await expect(ProfileService.assignProfile(udid, {})).rejects.toThrow(NotFoundError);
     });
+
+    it('handles push failure gracefully (non-fatal)', async () => {
+      NanoMDMService.enqueueCommand.mockResolvedValue({ command_uuid: 'cmd-123' });
+      NanoMDMService.sendPush.mockRejectedValue(new Error('APNs unavailable'));
+      db.Device.findOne.mockResolvedValue(mockDeviceWithEnrollment);
+      db.DevicePolicy.findOne.mockResolvedValue(null);
+      db.DevicePolicy.create.mockResolvedValue({ id: 'policy-uuid-1' });
+
+      const result = await ProfileService.assignProfile(udid, profilePayload);
+
+      expect(result).toEqual({ command_uuid: 'cmd-123' });
+      expect(db.DevicePolicy.create).toHaveBeenCalled();
+    });
   });
 
   describe('removeProfile', () => {
     const udid = 'UDID-001';
     const profileIdentifier = 'com.example.camera.restriction';
 
-    it('removes profile from device and marks DevicePolicy inactive', async () => {
-      NanoMDMService.removeProfile.mockResolvedValue({ command_uuid: 'cmd-456' });
-      db.Device.findOne.mockResolvedValue({ id: 'device-uuid-1' });
+    it('enqueues RemoveProfile via NanoMDM and marks DevicePolicy inactive', async () => {
+      NanoMDMService.enqueueCommand.mockResolvedValue({ command_uuid: 'cmd-456' });
+      NanoMDMService.sendPush.mockResolvedValue({ status: 'pushed' });
+      db.Device.findOne.mockResolvedValue(mockDeviceWithEnrollment);
       const policy = { id: 'policy-uuid-1', update: mockPolicyUpdate };
       db.DevicePolicy.findOne.mockResolvedValue(policy);
       mockPolicyUpdate.mockResolvedValue(policy);
 
       const result = await ProfileService.removeProfile(udid, profileIdentifier);
 
-      expect(NanoMDMService.removeProfile).toHaveBeenCalledWith(udid, profileIdentifier);
+      expect(NanoMDMService.enqueueCommand).toHaveBeenCalledWith('enr-abc-123', {
+        command: 'RemoveProfile',
+        device_udids: ['UDID-001'],
+        profile_identifier: profileIdentifier,
+      });
+      expect(NanoMDMService.sendPush).toHaveBeenCalledWith('enr-abc-123');
       expect(mockPolicyUpdate).toHaveBeenCalledWith({ is_active: false });
       expect(result).toEqual({ command_uuid: 'cmd-456' });
     });
 
-    it('does not update DevicePolicy when device is not found locally', async () => {
-      NanoMDMService.removeProfile.mockResolvedValue({});
+    it('throws NotFoundError when device is not found locally', async () => {
       db.Device.findOne.mockResolvedValue(null);
 
-      await ProfileService.removeProfile(udid, profileIdentifier);
-
-      expect(db.DevicePolicy.findOne).not.toHaveBeenCalled();
+      await expect(ProfileService.removeProfile(udid, profileIdentifier)).rejects.toThrow(
+        NotFoundError,
+      );
     });
 
     it('does not fail when no active DevicePolicy exists', async () => {
-      NanoMDMService.removeProfile.mockResolvedValue({});
-      db.Device.findOne.mockResolvedValue({ id: 'device-uuid-1' });
+      NanoMDMService.enqueueCommand.mockResolvedValue({ command_uuid: 'cmd-456' });
+      NanoMDMService.sendPush.mockResolvedValue({ status: 'pushed' });
+      db.Device.findOne.mockResolvedValue(mockDeviceWithEnrollment);
       db.DevicePolicy.findOne.mockResolvedValue(null);
 
       const result = await ProfileService.removeProfile(udid, profileIdentifier);
 
-      expect(result).toEqual({});
+      expect(result).toEqual({ command_uuid: 'cmd-456' });
     });
 
     it('throws when UDID is missing', async () => {
@@ -215,34 +236,107 @@ describe('ProfileService', () => {
   });
 
   describe('getProfiles', () => {
-    it('queries profiles from NanoMDMService', async () => {
-      const nanoResult = { profiles: [{ PayloadIdentifier: 'com.example' }] };
-      NanoMDMService.getProfiles.mockResolvedValue(nanoResult);
+    it('queries profiles from DevicePolicy table', async () => {
+      const policies = [
+        {
+          policy_type: 'com.example.profile',
+          policy_details: {
+            PayloadDisplayName: 'Test Profile',
+            PayloadOrganization: 'Org',
+            PayloadDescription: 'Desc',
+          },
+          is_active: true,
+          applied_at: new Date(),
+          Device: {
+            id: 'device-uuid-1',
+            device_identifier: 'UDID-001',
+            device_name: 'iPhone',
+            serial_number: 'SN-123',
+          },
+        },
+      ];
+      db.DevicePolicy.findAll.mockResolvedValue(policies);
 
       const result = await ProfileService.getProfiles({ limit: 10 });
 
-      expect(NanoMDMService.getProfiles).toHaveBeenCalledWith({ limit: 10 });
-      expect(result).toEqual(nanoResult);
+      expect(db.DevicePolicy.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { is_active: true },
+        }),
+      );
+      expect(result.profiles).toHaveLength(1);
+      expect(result.profiles[0].PayloadIdentifier).toBe('com.example.profile');
+    });
+
+    it('filters by device UDID when provided', async () => {
+      db.Device.findOne.mockResolvedValue(mockDeviceWithEnrollment);
+      db.DevicePolicy.findAll.mockResolvedValue([]);
+
+      await ProfileService.getProfiles({ filter: { udid: 'UDID-001' } });
+
+      expect(db.Device.findOne).toHaveBeenCalledWith({
+        where: { device_identifier: 'UDID-001' },
+        paranoid: false,
+      });
+      expect(db.DevicePolicy.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ device_id: 'device-uuid-1' }),
+        }),
+      );
+    });
+
+    it('returns empty when device UDID not found', async () => {
+      db.Device.findOne.mockResolvedValue(null);
+
+      const result = await ProfileService.getProfiles({ filter: { udid: 'UNKNOWN' } });
+
+      expect(result).toEqual({ profiles: [] });
+      expect(db.DevicePolicy.findAll).not.toHaveBeenCalled();
     });
 
     it('queries without params', async () => {
-      NanoMDMService.getProfiles.mockResolvedValue({ profiles: [] });
+      db.DevicePolicy.findAll.mockResolvedValue([]);
 
       await ProfileService.getProfiles();
 
-      expect(NanoMDMService.getProfiles).toHaveBeenCalledWith({});
+      expect(db.DevicePolicy.findAll).toHaveBeenCalled();
     });
   });
 
   describe('getProfile', () => {
-    it('gets a single profile by identifier', async () => {
-      const nanoResult = { PayloadIdentifier: 'com.example.profile' };
-      NanoMDMService.getProfile.mockResolvedValue(nanoResult);
+    it('gets a single profile by identifier from DevicePolicy', async () => {
+      const policy = {
+        policy_type: 'com.example.profile',
+        policy_details: {
+          PayloadDisplayName: 'Test',
+          PayloadOrganization: 'Org',
+          PayloadDescription: 'Desc',
+        },
+        is_active: true,
+        applied_at: new Date(),
+        Device: {
+          id: 'device-uuid-1',
+          device_identifier: 'UDID-001',
+          device_name: 'iPhone',
+          serial_number: 'SN-123',
+        },
+      };
+      db.DevicePolicy.findOne.mockResolvedValue(policy);
 
       const result = await ProfileService.getProfile('com.example.profile');
 
-      expect(NanoMDMService.getProfile).toHaveBeenCalledWith('com.example.profile');
-      expect(result).toEqual(nanoResult);
+      expect(db.DevicePolicy.findOne).toHaveBeenCalledWith({
+        where: { policy_type: 'com.example.profile', is_active: true },
+        include: [expect.objectContaining({ model: db.Device })],
+        order: [['created_at', 'DESC']],
+      });
+      expect(result.PayloadIdentifier).toBe('com.example.profile');
+    });
+
+    it('throws NotFoundError when profile is not found', async () => {
+      db.DevicePolicy.findOne.mockResolvedValue(null);
+
+      await expect(ProfileService.getProfile('unknown.profile')).rejects.toThrow(NotFoundError);
     });
 
     it('throws when identifier is missing', async () => {

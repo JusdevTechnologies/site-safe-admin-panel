@@ -1,5 +1,5 @@
-jest.mock('../../../src/integrations/NanoMDMService', () => ({
-  getDevices: jest.fn(),
+jest.mock('../../../src/services/DeviceService', () => ({
+  getAdminDeviceList: jest.fn(),
 }));
 
 jest.mock('../../../src/services/ProfileService', () => ({
@@ -13,7 +13,7 @@ jest.mock('../../../src/services/MDMCommandService', () => ({
 }));
 
 const MDMController = require('../../../src/controllers/MDMController');
-const NanoMDMService = require('../../../src/integrations/NanoMDMService');
+const DeviceService = require('../../../src/services/DeviceService');
 const ProfileService = require('../../../src/services/ProfileService');
 const MDMCommandService = require('../../../src/services/MDMCommandService');
 
@@ -33,26 +33,32 @@ describe('MDMController', () => {
   });
 
   describe('getDevices', () => {
-    it('responds with devices from NanoMDMService', async () => {
+    it('responds with devices from DeviceService', async () => {
       const { req, res, next } = mockReqRes();
-      const devices = [{ udid: 'UDID-001', serial_number: 'SN001' }];
-      NanoMDMService.getDevices.mockResolvedValue(devices);
+      const devices = [{ id: 'dev-1', deviceIdentifier: 'UDID-001' }];
+      DeviceService.getAdminDeviceList.mockResolvedValue({
+        data: devices,
+        total: 1,
+        page: 1,
+        limit: 20,
+      });
 
       await MDMController.getDevices(req, res, next);
 
-      expect(NanoMDMService.getDevices).toHaveBeenCalledWith(req.query);
+      expect(DeviceService.getAdminDeviceList).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: 'MDM devices retrieved successfully',
         data: devices,
+        meta: { total: 1, page: 1, limit: 20 },
       });
     });
 
     it('passes errors to next', async () => {
       const { req, res, next } = mockReqRes();
-      const error = new Error('NanoMDM unavailable');
-      NanoMDMService.getDevices.mockRejectedValue(error);
+      const error = new Error('DB unavailable');
+      DeviceService.getAdminDeviceList.mockRejectedValue(error);
 
       await MDMController.getDevices(req, res, next);
 

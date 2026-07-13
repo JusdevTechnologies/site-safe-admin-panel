@@ -1,9 +1,6 @@
 jest.mock('../../../src/services/ProfileService', () => ({
-  getProfile: jest.fn(),
-  createProfile: jest.fn(),
   assignProfile: jest.fn(),
   removeProfile: jest.fn(),
-  getProfiles: jest.fn(),
 }));
 
 jest.mock('../../../src/services/DeviceService', () => ({
@@ -14,6 +11,9 @@ jest.mock('../../../src/services/DeviceService', () => ({
 jest.mock('../../../src/models', () => ({
   Device: {
     findByPk: jest.fn(),
+    findOne: jest.fn(),
+  },
+  DevicePolicy: {
     findOne: jest.fn(),
   },
 }));
@@ -46,10 +46,7 @@ describe('CameraRestrictionService', () => {
     const userId = 'user-uuid-1';
     const reason = 'Policy violation';
 
-    it('blocks camera: ensures profile, assigns to device, updates local record', async () => {
-      ProfileService.getProfile.mockResolvedValue({
-        PayloadIdentifier: 'com.sitesafe.camera.restriction',
-      });
+    it('blocks camera: assigns profile to device, updates local record', async () => {
       ProfileService.assignProfile.mockResolvedValue({ command_uuid: 'cmd-123' });
       DeviceService.blockDeviceCamera.mockResolvedValue({ id: deviceId, cameraBlocked: true });
       db.Device.findByPk.mockResolvedValue({
@@ -61,34 +58,12 @@ describe('CameraRestrictionService', () => {
       const result = await CameraRestrictionService.blockCamera(deviceId, userId, reason);
 
       expect(db.Device.findByPk).toHaveBeenCalledWith(deviceId);
-      expect(ProfileService.getProfile).toHaveBeenCalledWith('com.sitesafe.camera.restriction');
-      expect(ProfileService.createProfile).not.toHaveBeenCalled();
       expect(ProfileService.assignProfile).toHaveBeenCalledWith(
         'UDID-001',
         CameraRestrictionService.getDefaultCameraRestrictionPayload(),
       );
       expect(DeviceService.blockDeviceCamera).toHaveBeenCalledWith(deviceId, userId, reason);
       expect(result).toEqual({ id: deviceId, cameraBlocked: true });
-    });
-
-    it('creates the restriction profile if it does not exist in NanoMDM', async () => {
-      ProfileService.getProfile.mockRejectedValue(new Error('Not found'));
-      ProfileService.createProfile.mockResolvedValue({ profile_uuid: 'prof-123' });
-      ProfileService.assignProfile.mockResolvedValue({ command_uuid: 'cmd-123' });
-      DeviceService.blockDeviceCamera.mockResolvedValue({ id: deviceId, cameraBlocked: true });
-      db.Device.findByPk.mockResolvedValue({
-        id: deviceId,
-        device_identifier: 'UDID-001',
-        camera_blocked: false,
-      });
-
-      await CameraRestrictionService.blockCamera(deviceId, userId, reason);
-
-      expect(ProfileService.getProfile).toHaveBeenCalledWith('com.sitesafe.camera.restriction');
-      expect(ProfileService.createProfile).toHaveBeenCalledWith(
-        CameraRestrictionService.getDefaultCameraRestrictionPayload(),
-      );
-      expect(ProfileService.assignProfile).toHaveBeenCalled();
     });
 
     it('throws NotFoundError when device does not exist', async () => {
@@ -118,9 +93,6 @@ describe('CameraRestrictionService', () => {
     });
 
     it('propagates errors from ProfileService.assignProfile', async () => {
-      ProfileService.getProfile.mockResolvedValue({
-        PayloadIdentifier: 'com.sitesafe.camera.restriction',
-      });
       ProfileService.assignProfile.mockRejectedValue(new Error('NanoMDM unavailable'));
       db.Device.findByPk.mockResolvedValue({
         id: deviceId,
@@ -206,7 +178,7 @@ describe('CameraRestrictionService', () => {
   describe('getCameraStatus', () => {
     const deviceIdentifier = 'UDID-001';
 
-    it('returns camera status from local DB and NanoMDM', async () => {
+    it('returns camera status from local DB and DevicePolicy', async () => {
       db.Device.findOne.mockResolvedValue({
         id: 'device-uuid-1',
         device_identifier: 'UDID-001',
@@ -214,8 +186,10 @@ describe('CameraRestrictionService', () => {
         camera_blocked_at: new Date('2026-07-13'),
         camera_blocked_by: 'user-uuid-1',
       });
-      ProfileService.getProfiles.mockResolvedValue({
-        profiles: [{ PayloadIdentifier: 'com.sitesafe.camera.restriction' }],
+      db.DevicePolicy.findOne.mockResolvedValue({
+        id: 'policy-uuid-1',
+        policy_type: 'com.sitesafe.camera.restriction',
+        is_active: true,
       });
 
       const result = await CameraRestrictionService.getCameraStatus(deviceIdentifier);
@@ -224,7 +198,7 @@ describe('CameraRestrictionService', () => {
       expect(result.nanoMDMStatus).toBe('restricted');
     });
 
-    it('returns unrestricted when NanoMDM profile not found', async () => {
+    it('returns unrestricted when DevicePolicy not found', async () => {
       db.Device.findOne.mockResolvedValue({
         id: 'device-uuid-1',
         device_identifier: 'UDID-001',
@@ -232,9 +206,7 @@ describe('CameraRestrictionService', () => {
         camera_blocked_at: null,
         camera_blocked_by: null,
       });
-      ProfileService.getProfiles.mockResolvedValue({
-        profiles: [{ PayloadIdentifier: 'com.sitesafe.other' }],
-      });
+      db.DevicePolicy.findOne.mockResolvedValue(null);
 
       const result = await CameraRestrictionService.getCameraStatus(deviceIdentifier);
 
@@ -242,7 +214,7 @@ describe('CameraRestrictionService', () => {
       expect(result.nanoMDMStatus).toBe('unrestricted');
     });
 
-    it('returns nanoMDMStatus as null when NanoMDM is unreachable', async () => {
+    it('returns nanoMDMStatus as null when DB query fails', async () => {
       db.Device.findOne.mockResolvedValue({
         id: 'device-uuid-1',
         device_identifier: 'UDID-001',
@@ -250,7 +222,7 @@ describe('CameraRestrictionService', () => {
         camera_blocked_at: null,
         camera_blocked_by: null,
       });
-      ProfileService.getProfiles.mockRejectedValue(new Error('NanoMDM timeout'));
+      db.DevicePolicy.findOne.mockRejectedValue(new Error('DB error'));
 
       const result = await CameraRestrictionService.getCameraStatus(deviceIdentifier);
 

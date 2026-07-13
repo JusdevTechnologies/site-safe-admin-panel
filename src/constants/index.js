@@ -108,24 +108,19 @@ const ENTITY_TYPES = {
 };
 
 const MDM_AUDIT_ACTIONS = {
-  GET_DEVICES: 'nanomdm_get_devices',
-  GET_DEVICE: 'nanomdm_get_device',
-  GET_PROFILES: 'nanomdm_get_profiles',
-  GET_PROFILE: 'nanomdm_get_profile',
-  CREATE_PROFILE: 'nanomdm_create_profile',
-  UPDATE_PROFILE: 'nanomdm_update_profile',
-  DELETE_PROFILE: 'nanomdm_delete_profile',
-  INSTALL_PROFILE: 'nanomdm_install_profile',
-  REMOVE_PROFILE: 'nanomdm_remove_profile',
-  SEND_COMMAND: 'nanomdm_send_command',
-  GET_COMMAND: 'nanomdm_get_command',
-  GET_COMMANDS: 'nanomdm_get_commands',
+  GET_VERSION: 'nanomdm_get_version',
+  GET_PUSHCERT: 'nanomdm_get_pushcert',
+  UPLOAD_PUSHCERT: 'nanomdm_upload_pushcert',
+  ENQUEUE_COMMAND: 'nanomdm_enqueue_command',
+  SEND_PUSH: 'nanomdm_send_push',
+  ESCROW_KEY_UNLOCK: 'nanomdm_escrow_key_unlock',
 };
 
 const MDM_ENTITY_TYPES = {
   DEVICE: 'MDM_DEVICE',
-  PROFILE: 'MDM_PROFILE',
   COMMAND: 'MDM_COMMAND',
+  CERTIFICATE: 'MDM_CERTIFICATE',
+  SERVER: 'MDM_SERVER',
 };
 
 // ============================================
@@ -147,10 +142,7 @@ const ADE_ENROLLMENT_STATUS = {
 };
 
 const ADE_ENROLLMENT_TRANSITIONS = {
-  [ADE_ENROLLMENT_STATUS.PENDING]: [
-    ADE_ENROLLMENT_STATUS.ASSIGNED,
-    ADE_ENROLLMENT_STATUS.FAILED,
-  ],
+  [ADE_ENROLLMENT_STATUS.PENDING]: [ADE_ENROLLMENT_STATUS.ASSIGNED, ADE_ENROLLMENT_STATUS.FAILED],
   [ADE_ENROLLMENT_STATUS.ASSIGNED]: [
     ADE_ENROLLMENT_STATUS.PROFILE_GENERATED,
     ADE_ENROLLMENT_STATUS.FAILED,

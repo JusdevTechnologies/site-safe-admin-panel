@@ -56,9 +56,6 @@ class NanoMDMService {
       (config) => {
         config._startTime = Date.now();
         config = strategy.apply(config);
-        logger.info(
-          `[NanoMDM] Request | ${config.method.toUpperCase()} ${config.baseURL}${config.url}`,
-        );
         return config;
       },
       (error) => Promise.reject(error),
@@ -191,83 +188,48 @@ class NanoMDMService {
     const url = config.url || '';
     const data = config.data || {};
 
-    if (method === 'GET' && url === '/v1/devices') {
+    if (method === 'GET' && url === '/version') {
       return {
-        action: MDM_AUDIT_ACTIONS.GET_DEVICES,
-        entityType: MDM_ENTITY_TYPES.DEVICE,
+        action: MDM_AUDIT_ACTIONS.GET_VERSION,
+        entityType: MDM_ENTITY_TYPES.SERVER,
         entityId: null,
       };
     }
-    if (method === 'GET' && url.startsWith('/v1/devices/')) {
-      const udid = decodeURIComponent(url.replace('/v1/devices/', ''));
+    if (method === 'GET' && url === '/v1/pushcert') {
       return {
-        action: MDM_AUDIT_ACTIONS.GET_DEVICE,
-        entityType: MDM_ENTITY_TYPES.DEVICE,
-        entityId: udid,
-      };
-    }
-    if (method === 'GET' && url === '/v1/profiles') {
-      return {
-        action: MDM_AUDIT_ACTIONS.GET_PROFILES,
-        entityType: MDM_ENTITY_TYPES.PROFILE,
+        action: MDM_AUDIT_ACTIONS.GET_PUSHCERT,
+        entityType: MDM_ENTITY_TYPES.CERTIFICATE,
         entityId: null,
       };
     }
-    if (method === 'GET' && url.startsWith('/v1/profiles/')) {
-      const identifier = decodeURIComponent(url.replace('/v1/profiles/', ''));
+    if (method === 'PUT' && url === '/v1/pushcert') {
       return {
-        action: MDM_AUDIT_ACTIONS.GET_PROFILE,
-        entityType: MDM_ENTITY_TYPES.PROFILE,
-        entityId: identifier,
+        action: MDM_AUDIT_ACTIONS.UPLOAD_PUSHCERT,
+        entityType: MDM_ENTITY_TYPES.CERTIFICATE,
+        entityId: null,
       };
     }
-    if (method === 'POST' && url === '/v1/profiles') {
-      const identifier = data.PayloadIdentifier || null;
+    if (method === 'PUT' && url.startsWith('/v1/enqueue/')) {
+      const enrollmentId = decodeURIComponent(url.replace('/v1/enqueue/', ''));
+      const commandType = data.command || 'Unknown';
       return {
-        action: MDM_AUDIT_ACTIONS.CREATE_PROFILE,
-        entityType: MDM_ENTITY_TYPES.PROFILE,
-        entityId: identifier,
-      };
-    }
-    if (method === 'PUT' && url.startsWith('/v1/profiles/')) {
-      const identifier = decodeURIComponent(url.replace('/v1/profiles/', ''));
-      return {
-        action: MDM_AUDIT_ACTIONS.UPDATE_PROFILE,
-        entityType: MDM_ENTITY_TYPES.PROFILE,
-        entityId: identifier,
-      };
-    }
-    if (method === 'DELETE' && url.startsWith('/v1/profiles/')) {
-      const identifier = decodeURIComponent(url.replace('/v1/profiles/', ''));
-      return {
-        action: MDM_AUDIT_ACTIONS.DELETE_PROFILE,
-        entityType: MDM_ENTITY_TYPES.PROFILE,
-        entityId: identifier,
-      };
-    }
-    if (method === 'POST' && url === '/v1/commands') {
-      const command = data.command || 'Unknown';
-      const actionMap = {
-        InstallProfile: MDM_AUDIT_ACTIONS.INSTALL_PROFILE,
-        RemoveProfile: MDM_AUDIT_ACTIONS.REMOVE_PROFILE,
-      };
-      return {
-        action: actionMap[command] || MDM_AUDIT_ACTIONS.SEND_COMMAND,
+        action: MDM_AUDIT_ACTIONS.ENQUEUE_COMMAND,
         entityType: MDM_ENTITY_TYPES.COMMAND,
-        entityId: null,
+        entityId: enrollmentId,
+        metadata: { commandType },
       };
     }
-    if (method === 'GET' && url.startsWith('/v1/commands/')) {
-      const uuid = decodeURIComponent(url.replace('/v1/commands/', ''));
+    if (method === 'GET' && url.startsWith('/v1/push/')) {
+      const enrollmentId = decodeURIComponent(url.replace('/v1/push/', ''));
       return {
-        action: MDM_AUDIT_ACTIONS.GET_COMMAND,
-        entityType: MDM_ENTITY_TYPES.COMMAND,
-        entityId: uuid,
+        action: MDM_AUDIT_ACTIONS.SEND_PUSH,
+        entityType: MDM_ENTITY_TYPES.DEVICE,
+        entityId: enrollmentId,
       };
     }
-    if (method === 'GET' && url === '/v1/commands') {
+    if (method === 'POST' && url === '/v1/escrowkeyunlock') {
       return {
-        action: MDM_AUDIT_ACTIONS.GET_COMMANDS,
+        action: MDM_AUDIT_ACTIONS.ESCROW_KEY_UNLOCK,
         entityType: MDM_ENTITY_TYPES.COMMAND,
         entityId: null,
       };
@@ -294,6 +256,7 @@ class NanoMDMService {
       ...(config.data && { requestPayload: config.data }),
       ...(responseData && { responseData }),
       ...(error && { failureReason: error.message }),
+      ...(meta.metadata && { ...meta.metadata }),
     };
 
     try {
@@ -314,7 +277,8 @@ class NanoMDMService {
     const method = (config.method || '').toUpperCase();
     const url = config.url || '';
 
-    if (method !== 'POST' || !url.includes('/v1/commands')) {
+    const isEnqueue = method === 'PUT' && url.includes('/v1/enqueue/');
+    if (!isEnqueue) {
       return;
     }
     if (!responseData || !responseData.command_uuid) {
@@ -322,165 +286,86 @@ class NanoMDMService {
     }
 
     const requestBody = config.data || {};
+    const enrollmentId = decodeURIComponent(url.replace('/v1/enqueue/', ''));
     const deviceUdids = requestBody.device_udids || [];
 
     await MDMCommandService.recordCommand({
       commandUuid: responseData.command_uuid,
       commandType: requestBody.command || 'Unknown',
-      deviceIdentifier: deviceUdids[0] || null,
+      deviceIdentifier: deviceUdids[0] || enrollmentId,
       requestPayload: requestBody,
       responseData,
-      status: 'sent',
+      status: 'queued',
     });
   }
 
-  async getDevices(params = {}) {
+  async getVersion() {
+    logger.info('Receiving NanoMDM version');
     return this._request({
       method: 'GET',
-      url: '/v1/devices',
-      params,
+      url: '/version',
     });
   }
 
-  async getDevice(udid) {
-    if (!udid) {
-      throw new ExternalServiceError('Device UDID is required');
-    }
+  async getPushCertificate() {
+    logger.info('Receiving Push Certificate');
     return this._request({
       method: 'GET',
-      url: `/v1/devices/${encodeURIComponent(udid)}`,
+      url: '/v1/pushcert',
     });
   }
 
-  async getProfiles(params = {}) {
-    return this._request({
-      method: 'GET',
-      url: '/v1/profiles',
-      params,
-    });
-  }
-
-  async getProfile(identifier) {
-    if (!identifier) {
-      throw new ExternalServiceError('Profile identifier is required');
-    }
-    return this._request({
-      method: 'GET',
-      url: `/v1/profiles/${encodeURIComponent(identifier)}`,
-    });
-  }
-
-  async createProfile(profileData) {
-    if (!profileData || !profileData.PayloadIdentifier) {
-      throw new ExternalServiceError('Profile must include a PayloadIdentifier');
-    }
-    if (!profileData.PayloadContent) {
-      throw new ExternalServiceError('Profile must include PayloadContent');
+  async uploadPushCertificate(certData) {
+    if (!certData) {
+      throw new ExternalServiceError('Push certificate data is required');
     }
 
-    return this._request({
-      method: 'POST',
-      url: '/v1/profiles',
-      data: profileData,
-    });
-  }
-
-  async updateProfile(identifier, profileData) {
-    if (!identifier) {
-      throw new ExternalServiceError('Profile identifier is required');
-    }
-    if (!profileData) {
-      throw new ExternalServiceError('Profile update data is required');
-    }
-
+    logger.info('Uploading Push Certificate');
     return this._request({
       method: 'PUT',
-      url: `/v1/profiles/${encodeURIComponent(identifier)}`,
-      data: profileData,
+      url: '/v1/pushcert',
+      data: certData,
     });
   }
 
-  async deleteProfile(identifier) {
-    if (!identifier) {
-      throw new ExternalServiceError('Profile identifier is required');
+  async enqueueCommand(enrollmentId, command) {
+    if (!enrollmentId) {
+      throw new ExternalServiceError('Enrollment ID is required');
     }
+    if (!command || !command.command) {
+      throw new ExternalServiceError('Command with a "command" field is required');
+    }
+
+    logger.info(`Queueing Command | ${command.command} | enrollment=${enrollmentId}`);
     return this._request({
-      method: 'DELETE',
-      url: `/v1/profiles/${encodeURIComponent(identifier)}`,
+      method: 'PUT',
+      url: `/v1/enqueue/${encodeURIComponent(enrollmentId)}`,
+      data: command,
     });
   }
 
-  async installProfile(udid, profilePayload) {
-    if (!udid) {
-      throw new ExternalServiceError('Device UDID is required');
-    }
-    if (!profilePayload) {
-      throw new ExternalServiceError('Profile payload is required');
+  async sendPush(enrollmentId) {
+    if (!enrollmentId) {
+      throw new ExternalServiceError('Enrollment ID is required');
     }
 
-    return this._request({
-      method: 'POST',
-      url: '/v1/commands',
-      data: {
-        command: 'InstallProfile',
-        device_udids: [udid],
-        profile: profilePayload,
-      },
-    });
-  }
-
-  async removeProfile(udid, profileIdentifier) {
-    if (!udid) {
-      throw new ExternalServiceError('Device UDID is required');
-    }
-    if (!profileIdentifier) {
-      throw new ExternalServiceError('Profile identifier is required');
-    }
-
-    return this._request({
-      method: 'POST',
-      url: '/v1/commands',
-      data: {
-        command: 'RemoveProfile',
-        device_udids: [udid],
-        profile_identifier: profileIdentifier,
-      },
-    });
-  }
-
-  async sendCommand(udid, commandBody) {
-    if (!udid) {
-      throw new ExternalServiceError('Device UDID is required');
-    }
-    if (!commandBody || !commandBody.command) {
-      throw new ExternalServiceError('Command body with a "command" field is required');
-    }
-
-    return this._request({
-      method: 'POST',
-      url: '/v1/commands',
-      data: {
-        ...commandBody,
-        device_udids: commandBody.device_udids || [udid],
-      },
-    });
-  }
-
-  async getCommand(commandUuid) {
-    if (!commandUuid) {
-      throw new ExternalServiceError('Command UUID is required');
-    }
+    logger.info(`Sending APNs Push | enrollment=${enrollmentId}`);
     return this._request({
       method: 'GET',
-      url: `/v1/commands/${encodeURIComponent(commandUuid)}`,
+      url: `/v1/push/${encodeURIComponent(enrollmentId)}`,
     });
   }
 
-  async getCommands(params = {}) {
+  async escrowKeyUnlock(escrowKey) {
+    if (!escrowKey) {
+      throw new ExternalServiceError('Escrow key is required');
+    }
+
+    logger.info('Receiving Escrow Key Unlock');
     return this._request({
-      method: 'GET',
-      url: '/v1/commands',
-      params,
+      method: 'POST',
+      url: '/v1/escrowkeyunlock',
+      data: { escrow_key: escrowKey },
     });
   }
 }

@@ -27,15 +27,6 @@ class CameraRestrictionService {
     };
   }
 
-  async _ensureProfileExists() {
-    try {
-      await ProfileService.getProfile(CAMERA_RESTRICTION_IDENTIFIER);
-    } catch (error) {
-      const payload = this.getDefaultCameraRestrictionPayload();
-      await ProfileService.createProfile(payload);
-    }
-  }
-
   async blockCamera(deviceId, userId, reason) {
     const device = await db.Device.findByPk(deviceId);
 
@@ -49,9 +40,7 @@ class CameraRestrictionService {
 
     logger.info(`[CameraRestriction] Blocking camera for device ${deviceId}`);
 
-    await this._ensureProfileExists();
-
-    await ProfileService.assignProfile(
+    const result = await ProfileService.assignProfile(
       device.device_identifier,
       this.getDefaultCameraRestrictionPayload(),
     );
@@ -94,14 +83,17 @@ class CameraRestrictionService {
 
     let nanoMDMStatus = null;
     try {
-      const profiles = await ProfileService.getProfiles({ filter: { udid: deviceIdentifier } });
-      const restrictionProfile = (profiles.profiles || []).find(
-        (p) => p.PayloadIdentifier === CAMERA_RESTRICTION_IDENTIFIER,
-      );
-      nanoMDMStatus = restrictionProfile ? 'restricted' : 'unrestricted';
+      const policy = await db.DevicePolicy.findOne({
+        where: {
+          device_id: device.id,
+          policy_type: CAMERA_RESTRICTION_IDENTIFIER,
+          is_active: true,
+        },
+      });
+      nanoMDMStatus = policy ? 'restricted' : 'unrestricted';
     } catch (error) {
       logger.warn(
-        `[CameraRestriction] Unable to check NanoMDM status for ${deviceIdentifier}: ${error.message}`,
+        `[CameraRestriction] Unable to check policy status for ${deviceIdentifier}: ${error.message}`,
       );
     }
 

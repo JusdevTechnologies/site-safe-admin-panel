@@ -1,18 +1,10 @@
 const logger = require('../utils/logger');
-const DeviceSyncService = require('../services/DeviceSyncService');
 const MDMCommandService = require('../services/MDMCommandService');
-const NanoMDMService = require('../integrations/NanoMDMService');
+const db = require('../models');
+const { Op } = require('sequelize');
+const { ADE_ENROLLMENT_STATUS } = require('../constants');
 
-const DEFAULT_INTERVAL_MS = 30000;
-const MAX_COMMANDS_PER_TICK = 20;
-
-const COMMAND_STATUS_MAP = {
-  Acknowledged: 'acknowledged',
-  Error: 'failed',
-  Failed: 'failed',
-  NotNow: 'failed',
-  CommandFormatError: 'failed',
-};
+const DEFAULT_INTERVAL_MS = 60000;
 
 class SyncScheduler {
   constructor(intervalMs = DEFAULT_INTERVAL_MS) {
@@ -70,14 +62,14 @@ class SyncScheduler {
 
     try {
       const results = await Promise.allSettled([
-        this._syncDevices(),
-        this._syncCommands(),
-        this._syncProfiles(),
+        this._retryFailedCommands(),
+        this._cleanupExpiredEnrollments(),
+        this._cleanupAuditLogs(),
         this._checkHealth(),
       ]);
 
       const summary = results.map((r, i) => {
-        const labels = ['Devices', 'Commands', 'Profiles', 'Health'];
+        const labels = ['Commands', 'Enrollments', 'AuditLogs', 'Health'];
         return r.status === 'fulfilled'
           ? `${labels[i]}=OK`
           : `${labels[i]}=FAIL(${r.reason?.message || 'unknown'})`;
@@ -99,53 +91,102 @@ class SyncScheduler {
     }
   }
 
-  async _syncDevices() {
-    const result = await DeviceSyncService.fullSync();
-    return result;
-  }
+  async _retryFailedCommands() {
+    const staleThreshold = new Date(Date.now() - 30 * 60 * 1000);
 
-  async _syncCommands() {
-    const pending = await MDMCommandService.getPendingCommands();
+    const staleCommands = await db.MDMCommand.findAll({
+      where: {
+        status: 'sent',
+        sent_at: { [Op.lt]: staleThreshold },
+      },
+      order: [['sent_at', 'ASC']],
+      limit: 50,
+    });
 
-    if (pending.length === 0) {
-      return { synced: 0 };
-    }
-
-    const batch = pending.slice(0, MAX_COMMANDS_PER_TICK);
-    let synced = 0;
-    let failed = 0;
-
-    for (const cmd of batch) {
+    let retried = 0;
+    for (const cmd of staleCommands) {
+      if (cmd.retry_count >= cmd.max_retries) {
+        continue;
+      }
       try {
-        const nanoResponse = await NanoMDMService.getCommand(cmd.commandUuid);
-        const nanoStatus = nanoResponse && nanoResponse.status;
-        const mappedStatus = COMMAND_STATUS_MAP[nanoStatus];
-
-        if (mappedStatus) {
-          await MDMCommandService.updateCommandStatus(cmd.id, mappedStatus, {
-            response_data: nanoResponse,
-          });
-        }
-        synced += 1;
+        await cmd.update({
+          retry_count: cmd.retry_count + 1,
+          status: 'queued',
+          queued_at: new Date(),
+        });
+        retried += 1;
       } catch (err) {
-        logger.warn(`[SyncScheduler] Command sync failed for ${cmd.commandUuid}: ${err.message}`);
-        failed += 1;
+        logger.warn(`[SyncScheduler] Failed to retry command ${cmd.command_uuid}: ${err.message}`);
       }
     }
 
-    logger.info(
-      `[SyncScheduler] Command sync | batch=${batch.length} synced=${synced} failed=${failed}`,
-    );
+    if (retried > 0) {
+      logger.info(`[SyncScheduler] Retried ${retried} stale command(s)`);
+    }
 
-    return { synced, failed, total: pending.length };
+    return { retried };
   }
 
-  async _syncProfiles() {
-    const result = await NanoMDMService.getProfiles();
-    return result;
+  async _cleanupExpiredEnrollments() {
+    const expiryDays = 90;
+    const cutoff = new Date(Date.now() - expiryDays * 24 * 60 * 60 * 1000);
+
+    const expired = await db.AdeEnrollment.findAll({
+      where: {
+        status: {
+          [Op.notIn]: [ADE_ENROLLMENT_STATUS.COMPLETED, ADE_ENROLLMENT_STATUS.FAILED],
+        },
+        updated_at: { [Op.lt]: cutoff },
+      },
+    });
+
+    let cleaned = 0;
+    for (const enrollment of expired) {
+      try {
+        await enrollment.update({
+          status: ADE_ENROLLMENT_STATUS.FAILED,
+          last_error: 'Enrollment expired due to inactivity',
+        });
+        cleaned += 1;
+      } catch (err) {
+        logger.warn(`[SyncScheduler] Failed to expire enrollment ${enrollment.id}: ${err.message}`);
+      }
+    }
+
+    if (cleaned > 0) {
+      logger.info(`[SyncScheduler] Expired ${cleaned} stale enrollment(s)`);
+    }
+
+    return { cleaned };
+  }
+
+  async _cleanupAuditLogs() {
+    const retentionDays = 365;
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+
+    try {
+      const deleted = await db.AuditLog.destroy({
+        where: {
+          created_at: { [Op.lt]: cutoff },
+        },
+      });
+
+      if (deleted > 0) {
+        logger.info(
+          `[SyncScheduler] Cleaned up ${deleted} audit log(s) older than ${retentionDays} days`,
+        );
+      }
+
+      return { deleted };
+    } catch (err) {
+      logger.warn(`[SyncScheduler] Audit log cleanup failed: ${err.message}`);
+      return { deleted: 0 };
+    }
   }
 
   async _checkHealth() {
+    const NanoMDMService = require('../integrations/NanoMDMService');
+
     const health = {
       status: 'healthy',
       nanoMDM: false,
@@ -154,7 +195,7 @@ class SyncScheduler {
     };
 
     try {
-      await NanoMDMService.getDevices({ limit: 1 });
+      await NanoMDMService.getVersion();
       health.nanoMDM = true;
     } catch (err) {
       health.status = 'degraded';
@@ -162,7 +203,6 @@ class SyncScheduler {
     }
 
     try {
-      const db = require('../models');
       await db.sequelize.authenticate();
       health.database = true;
     } catch (err) {

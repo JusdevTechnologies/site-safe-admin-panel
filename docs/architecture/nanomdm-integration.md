@@ -1,0 +1,262 @@
+# NanoMDM Integration Architecture
+
+## Overview
+
+NanoMDM is an Apple MDM protocol server. It is **not** an inventory server or a profile management server. Its sole responsibility is implementing the Apple MDM protocol: handling device Authenticate/Check-In messages, managing APNs push notifications, and maintaining a command queue for enrolled devices.
+
+This document describes the correct integration architecture between SiteSafe middleware, NanoMDM, NanoDEP, and PostgreSQL.
+
+---
+
+## Component Responsibilities
+
+### NanoDEP
+
+- Communicates with Apple Business Manager (ABM) via Apple's ADE APIs
+- Manages DEP tokens and session authentication
+- Handles device assignment from ABM
+- Serves enrollment profiles to devices during Setup Assistant
+- Reports device enrollment status back to ABM
+
+### NanoMDM
+
+- Listens for device Authenticate messages
+- Listens for device Check-In messages (TokenUpdate, CheckOut, etc.)
+- Manages APNs push certificates
+- Maintains an MDM command queue per enrolled device
+- Delivers commands to devices when they check in
+- Sends APNs push notifications to wake devices
+
+NanoMDM exposes the following REST API endpoints only:
+
+| Method | Endpoint                     | Purpose                             |
+| ------ | ---------------------------- | ----------------------------------- |
+| GET    | `/version`                   | Server version info                 |
+| GET    | `/v1/pushcert`               | Retrieve push certificate metadata  |
+| PUT    | `/v1/pushcert`               | Upload/update push certificate      |
+| PUT    | `/v1/enqueue/{enrollmentID}` | Enqueue an MDM command for a device |
+| GET    | `/v1/push/{enrollmentID}`    | Trigger APNs push to a device       |
+| POST   | `/v1/escrowkeyunlock`        | Unlock an escrow key                |
+
+NanoMDM does **not** expose:
+
+- GET `/v1/devices` — Device inventory
+- GET `/v1/profiles` — Profile management
+- POST `/v1/commands` — Command submission
+- GET `/v1/commands/:uuid` — Command status polling
+
+### Middleware (Node.js + Express)
+
+- Receives and processes NanoMDM callbacks (Authenticate, TokenUpdate, CheckOut)
+- Persists device inventory data to PostgreSQL from check-in events
+- Generates MDM enrollment profiles
+- Enqueues MDM commands via NanoMDM's `PUT /v1/enqueue/{enrollmentID}`
+- Triggers APNs push via NanoMDM's `GET /v1/push/{enrollmentID}`
+- Manages the enrollment lifecycle state machine
+- Provides REST APIs for the React Admin panel
+- Validates and audits all operations
+
+### PostgreSQL
+
+- **Source of truth** for all device, enrollment, profile, certificate, command, and audit data
+- Stores device inventory populated from NanoMDM check-in events
+- Stores enrollment profiles and their assignments
+- Stores MDM commands and their statuses
+- Stores audit logs for all operations
+- Stores certificate metadata
+
+---
+
+## Architecture Diagram
+
+```
+Apple Business Manager
+        |
+        v
+     NanoDEP
+        ^
+        |
+  ADE APIs
+        |
+Node Middleware
+        |
+ +------+------+
+ |             |
+ v             v
+NanoMDM    PostgreSQL
+ |             |
+ v             v
+iPhone     React Admin
+```
+
+---
+
+## Data Flow
+
+### Device Enrollment Flow
+
+1. Device is assigned in ABM → ABM notifies NanoDEP
+2. Device contacts Apple's ADE service during Setup Assistant
+3. ADE redirects device to NanoDEP for enrollment profile
+4. NanoDEP requests profile from Middleware (`/server/profile/generate`)
+5. Middleware generates `.mobileconfig` enrollment profile and returns it
+6. Device downloads and installs the profile
+7. Device sends MDM **Authenticate** to Middleware
+8. Middleware correlates the event, updates enrollment status
+9. Device sends MDM **TokenUpdate** (Check-In) to Middleware
+10. Middleware persists device identity data (UDID, enrollment ID, push magic, etc.) to PostgreSQL
+11. Enrollment is marked as `checkin_received` and transitions to `mdm_connection`
+12. Device is now ready to receive MDM commands
+
+### Command Flow
+
+1. Admin triggers an action (e.g., block camera) via React Admin panel
+2. Middleware creates a command record in PostgreSQL (status: `queued`)
+3. Middleware calls `PUT /v1/enqueue/{enrollmentID}` on NanoMDM with the MDM command payload
+4. Middleware calls `GET /v1/push/{enrollmentID}` on NanoMDM to wake the device via APNs
+5. Device receives APNs push, connects to NanoMDM, and retrieves the pending command
+6. Device executes the command and sends the result back to NanoMDM
+7. NanoMDM forwards the command response to Middleware via callback
+8. Middleware updates the command status in PostgreSQL (`acknowledged` or `failed`)
+
+No polling is involved. All command status updates happen via callbacks.
+
+### Inventory Flow
+
+1. Device sends TokenUpdate (Check-In) to Middleware via NanoMDM
+2. Middleware extracts device data from the check-in payload:
+   - UDID
+   - Enrollment ID (generated by NanoMDM)
+   - PushMagic
+   - Push Token
+   - Serial Number
+   - Device Name
+   - Model
+   - Product Type
+   - OS Version
+   - Build Version
+3. Middleware persists this data to PostgreSQL `devices` table
+4. Middleware updates the `device_info` JSON column with NanoMDM-specific fields
+5. React Admin reads device inventory exclusively from PostgreSQL
+
+Inventory is **never** fetched via REST APIs from NanoMDM.
+
+### Enrollment Lifecycle
+
+```
+pending
+   |
+   v
+assigned
+   |
+   v
+profile_generated
+   |
+   v
+profile_delivered
+   |
+   v
+enrollment_started
+   |
+   v
+authenticated  <-- triggered by NanoMDM Authenticate callback
+   |
+   v
+checkin_received  <-- triggered by NanoMDM TokenUpdate callback
+   |
+   v
+mdm_connection
+   |
+   v
+device_configured
+   |
+   v
+completed
+```
+
+Every state supports a `failed` transition. State transitions are driven by NanoMDM callbacks and ADE events, not by polling.
+
+---
+
+## API Endpoints
+
+### Supported NanoMDM Endpoints (via NanoMDMService)
+
+| Method                           | Implementation                                         | Description                       |
+| -------------------------------- | ------------------------------------------------------ | --------------------------------- |
+| `GET /version`                   | `NanoMDMService.getVersion()`                          | Returns NanoMDM server version    |
+| `GET /v1/pushcert`               | `NanoMDMService.getPushCertificate()`                  | Returns push certificate metadata |
+| `PUT /v1/pushcert`               | `NanoMDMService.uploadPushCertificate(data)`           | Uploads a new push certificate    |
+| `PUT /v1/enqueue/{enrollmentID}` | `NanoMDMService.enqueueCommand(enrollmentId, command)` | Enqueues an MDM command           |
+| `GET /v1/push/{enrollmentID}`    | `NanoMDMService.sendPush(enrollmentId)`                | Sends APNs push to device         |
+| `POST /v1/escrowkeyunlock`       | `NanoMDMService.escrowKeyUnlock(escrowKey)`            | Unlocks an escrow key             |
+
+### Middleware REST Endpoints (Unchanged)
+
+| Method | Path                                | Source                              |
+| ------ | ----------------------------------- | ----------------------------------- |
+| GET    | `/api/v1/admin/devices`             | PostgreSQL (via DeviceService)      |
+| GET    | `/api/v1/admin/mdm/devices`         | PostgreSQL (via DeviceService)      |
+| GET    | `/api/v1/admin/mdm/profiles`        | PostgreSQL (via DevicePolicy)       |
+| POST   | `/api/v1/admin/mdm/profile/install` | Enqueues InstallProfile via NanoMDM |
+| POST   | `/api/v1/admin/mdm/profile/remove`  | Enqueues RemoveProfile via NanoMDM  |
+| GET    | `/api/v1/admin/mdm/commands`        | PostgreSQL (via MDMCommandService)  |
+
+---
+
+## Why PostgreSQL is the Source of Truth
+
+NanoMDM is a stateless protocol transport layer. It does not maintain:
+
+- Device inventory
+- Profile definitions or assignments
+- Historical command records
+- Enrollment lifecycle state
+- Audit trails
+
+All of these must be persisted in PostgreSQL, which serves as the authoritative data store for the React Admin panel and all middleware operations.
+
+NanoMDM's only persistent state is the command queue per enrollment ID — once a command is delivered and acknowledged, NanoMDM does not retain it.
+
+---
+
+## Configuration
+
+Environment variables for NanoMDM integration:
+
+```
+NANOMDM_BASE_URL=https://nanomdm.example.com
+NANOMDM_AUTH_TYPE=api_key
+NANOMDM_API_KEY=your-api-key
+NANOMDM_BEARER_TOKEN=
+NANOMDM_TIMEOUT=30000
+```
+
+---
+
+## Scheduler Tasks
+
+The SyncScheduler no longer polls NanoMDM for devices or profiles. It performs:
+
+| Task                        | Interval | Description                                                          |
+| --------------------------- | -------- | -------------------------------------------------------------------- |
+| Retry Failed Commands       | 60s      | Re-queues stale commands that have not been acknowledged             |
+| Cleanup Expired Enrollments | 60s      | Marks enrollments as failed after 90 days of inactivity              |
+| Cleanup Audit Logs          | 60s      | Removes audit logs older than 365 days                               |
+| Health Check                | 60s      | Verifies NanoMDM connectivity via `GET /version` and DB connectivity |
+
+---
+
+## Logging Conventions
+
+NanoMDMService uses protocol-oriented log messages:
+
+- `Receiving Authenticate`
+- `Receiving Check-In`
+- `Queueing Command | {command} | enrollment={enrollmentId}`
+- `Sending APNs Push | enrollment={enrollmentId}`
+- `Receiving Push Certificate`
+- `Uploading Push Certificate`
+- `Receiving Escrow Key Unlock`
+
+Never log secrets such as push certificates, authentication tokens, or passwords.

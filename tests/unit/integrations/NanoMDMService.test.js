@@ -74,9 +74,9 @@ describe('NanoMDMService', () => {
 
   describe('initialization', () => {
     it('creates an axios client with correct base config on first use', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: { devices: [] } });
+      mockAxiosInstance.request.mockResolvedValue({ data: { version: '1.0.0' } });
 
-      await nanoMDMService.getDevices();
+      await nanoMDMService.getVersion();
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'https://nanomdm.example.com',
@@ -90,515 +90,273 @@ describe('NanoMDMService', () => {
     });
 
     it('registers request and response interceptors', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: { devices: [] } });
+      mockAxiosInstance.request.mockResolvedValue({ data: { version: '1.0.0' } });
 
-      await nanoMDMService.getDevices();
+      await nanoMDMService.getVersion();
 
       expect(mockAxiosInstance.interceptors.request.use).toHaveBeenCalled();
       expect(mockAxiosInstance.interceptors.response.use).toHaveBeenCalled();
     });
 
     it('applies auth strategy via request interceptor', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: { devices: [] } });
+      mockAxiosInstance.request.mockResolvedValue({ data: { version: '1.0.0' } });
 
-      await nanoMDMService.getDevices();
+      await nanoMDMService.getVersion();
 
       expect(requestInterceptorSuccess).toBeDefined();
       const enrichedConfig = requestInterceptorSuccess({
         headers: { 'Content-Type': 'application/json' },
         method: 'get',
-        url: '/v1/devices',
+        url: '/version',
       });
       expect(enrichedConfig.headers['X-API-Key']).toBe('test-api-key');
     });
 
     it('reuses the existing client instance', async () => {
       nanoMDMService._client = mockAxiosInstance;
-      mockAxiosInstance.request.mockResolvedValue({ data: { devices: [] } });
+      mockAxiosInstance.request.mockResolvedValue({ data: { version: '1.0.0' } });
 
-      await nanoMDMService.getDevices();
+      await nanoMDMService.getVersion();
 
       expect(axios.create).not.toHaveBeenCalled();
     });
   });
 
-  describe('getDevices', () => {
-    it('fetches devices without params', async () => {
-      const expected = { devices: [{ udid: 'abc' }] };
+  describe('getVersion', () => {
+    it('fetches the NanoMDM server version', async () => {
+      const expected = { version: '1.0.0', build: 'abc123' };
       mockAxiosInstance.request.mockResolvedValue({ data: expected });
 
-      const result = await nanoMDMService.getDevices();
+      const result = await nanoMDMService.getVersion();
 
       expect(mockAxiosInstance.request).toHaveBeenCalledWith({
         method: 'GET',
-        url: '/v1/devices',
-        params: {},
+        url: '/version',
       });
       expect(result).toEqual(expected);
     });
-
-    it('fetches devices with query params', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: { devices: [] } });
-
-      await nanoMDMService.getDevices({ filter: 'ios', page: 1 });
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/devices',
-        params: { filter: 'ios', page: 1 },
-      });
-    });
   });
 
-  describe('getDevice', () => {
-    it('fetches a single device by UDID', async () => {
-      const expected = { udid: 'abc123', status: 'active' };
+  describe('getPushCertificate', () => {
+    it('fetches push certificate info', async () => {
+      const expected = { subject: 'CN=...', expiry: '2027-01-01' };
       mockAxiosInstance.request.mockResolvedValue({ data: expected });
 
-      const result = await nanoMDMService.getDevice('abc123');
+      const result = await nanoMDMService.getPushCertificate();
 
       expect(mockAxiosInstance.request).toHaveBeenCalledWith({
         method: 'GET',
-        url: '/v1/devices/abc123',
+        url: '/v1/pushcert',
       });
       expect(result).toEqual(expected);
     });
-
-    it('encodes the UDID in the URL', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: {} });
-
-      await nanoMDMService.getDevice('abc 123');
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/devices/abc%20123',
-      });
-    });
-
-    it('throws when UDID is empty', async () => {
-      await expect(nanoMDMService.getDevice('')).rejects.toThrow(ExternalServiceError);
-      await expect(nanoMDMService.getDevice('')).rejects.toThrow('Device UDID is required');
-    });
-
-    it('throws when UDID is undefined', async () => {
-      await expect(nanoMDMService.getDevice(undefined)).rejects.toThrow(ExternalServiceError);
-      await expect(nanoMDMService.getDevice(undefined)).rejects.toThrow('Device UDID is required');
-    });
   });
 
-  describe('getProfiles', () => {
-    it('fetches profiles without params', async () => {
-      const expected = { profiles: [{ identifier: 'com.example.profile' }] };
+  describe('uploadPushCertificate', () => {
+    const certData = { certificate: 'base64...', password: 'secret' };
+
+    it('uploads a push certificate', async () => {
+      const expected = { status: 'ok' };
       mockAxiosInstance.request.mockResolvedValue({ data: expected });
 
-      const result = await nanoMDMService.getProfiles();
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/profiles',
-        params: {},
-      });
-      expect(result).toEqual(expected);
-    });
-
-    it('fetches profiles with query params', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: { profiles: [] } });
-
-      await nanoMDMService.getProfiles({ limit: 50 });
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/profiles',
-        params: { limit: 50 },
-      });
-    });
-  });
-
-  describe('getProfile', () => {
-    it('fetches a single profile by identifier', async () => {
-      const expected = { PayloadIdentifier: 'com.example.profile', PayloadDisplayName: 'Test' };
-      mockAxiosInstance.request.mockResolvedValue({ data: expected });
-
-      const result = await nanoMDMService.getProfile('com.example.profile');
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/profiles/com.example.profile',
-      });
-      expect(result).toEqual(expected);
-    });
-
-    it('encodes the identifier in the URL', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: {} });
-
-      await nanoMDMService.getProfile('test profile');
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/profiles/test%20profile',
-      });
-    });
-
-    it('throws when identifier is empty', async () => {
-      await expect(nanoMDMService.getProfile('')).rejects.toThrow('Profile identifier is required');
-    });
-
-    it('throws when identifier is undefined', async () => {
-      await expect(nanoMDMService.getProfile(undefined)).rejects.toThrow(
-        'Profile identifier is required',
-      );
-    });
-  });
-
-  describe('createProfile', () => {
-    const validProfile = {
-      PayloadIdentifier: 'com.example.profile',
-      PayloadContent: {
-        /* profile content */
-      },
-      PayloadDisplayName: 'Test Profile',
-    };
-
-    it('creates a profile with POST', async () => {
-      const expected = { profile_uuid: 'prof-123' };
-      mockAxiosInstance.request.mockResolvedValue({ data: expected });
-
-      const result = await nanoMDMService.createProfile(validProfile);
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'POST',
-        url: '/v1/profiles',
-        data: validProfile,
-      });
-      expect(result).toEqual(expected);
-    });
-
-    it('throws when PayloadIdentifier is missing', async () => {
-      await expect(nanoMDMService.createProfile({ PayloadContent: {} })).rejects.toThrow(
-        'Profile must include a PayloadIdentifier',
-      );
-    });
-
-    it('throws when PayloadContent is missing', async () => {
-      await expect(
-        nanoMDMService.createProfile({ PayloadIdentifier: 'com.example' }),
-      ).rejects.toThrow('Profile must include PayloadContent');
-    });
-
-    it('throws when data is null', async () => {
-      await expect(nanoMDMService.createProfile(null)).rejects.toThrow(
-        'Profile must include a PayloadIdentifier',
-      );
-    });
-  });
-
-  describe('updateProfile', () => {
-    const updateData = { PayloadDisplayName: 'Updated Profile' };
-
-    it('updates a profile with PUT', async () => {
-      const expected = { profile_uuid: 'prof-123', ...updateData };
-      mockAxiosInstance.request.mockResolvedValue({ data: expected });
-
-      const result = await nanoMDMService.updateProfile('com.example.profile', updateData);
+      const result = await nanoMDMService.uploadPushCertificate(certData);
 
       expect(mockAxiosInstance.request).toHaveBeenCalledWith({
         method: 'PUT',
-        url: '/v1/profiles/com.example.profile',
-        data: updateData,
+        url: '/v1/pushcert',
+        data: certData,
       });
       expect(result).toEqual(expected);
     });
 
-    it('throws when identifier is empty', async () => {
-      await expect(nanoMDMService.updateProfile('', updateData)).rejects.toThrow(
-        'Profile identifier is required',
-      );
-    });
-
-    it('throws when identifier is undefined', async () => {
-      await expect(nanoMDMService.updateProfile(undefined, updateData)).rejects.toThrow(
-        'Profile identifier is required',
-      );
-    });
-
-    it('throws when update data is missing', async () => {
-      await expect(nanoMDMService.updateProfile('com.example.profile', null)).rejects.toThrow(
-        'Profile update data is required',
+    it('throws when certData is missing', async () => {
+      await expect(nanoMDMService.uploadPushCertificate(null)).rejects.toThrow(
+        'Push certificate data is required',
       );
     });
   });
 
-  describe('deleteProfile', () => {
-    it('deletes a profile with DELETE', async () => {
-      const expected = { deleted: true };
-      mockAxiosInstance.request.mockResolvedValue({ data: expected });
+  describe('enqueueCommand', () => {
+    const enrollmentId = 'enr-abc123';
+    const command = {
+      command: 'DeviceLock',
+      device_udids: ['udid-1'],
+      pin: '1234',
+    };
 
-      const result = await nanoMDMService.deleteProfile('com.example.profile');
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'DELETE',
-        url: '/v1/profiles/com.example.profile',
-      });
-      expect(result).toEqual(expected);
-    });
-
-    it('encodes the identifier in the URL', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: {} });
-
-      await nanoMDMService.deleteProfile('test profile');
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'DELETE',
-        url: '/v1/profiles/test%20profile',
-      });
-    });
-
-    it('throws when identifier is empty', async () => {
-      await expect(nanoMDMService.deleteProfile('')).rejects.toThrow(
-        'Profile identifier is required',
-      );
-    });
-
-    it('throws when identifier is undefined', async () => {
-      await expect(nanoMDMService.deleteProfile(undefined)).rejects.toThrow(
-        'Profile identifier is required',
-      );
-    });
-  });
-
-  describe('installProfile', () => {
-    it('sends an install profile command', async () => {
-      const payload = { PayloadContent: {}, PayloadIdentifier: 'com.example.profile' };
-      const expected = { command_uuid: 'uuid-123' };
-      mockAxiosInstance.request.mockResolvedValue({ data: expected });
-
-      const result = await nanoMDMService.installProfile('udid-1', payload);
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'POST',
-        url: '/v1/commands',
-        data: {
-          command: 'InstallProfile',
-          device_udids: ['udid-1'],
-          profile: payload,
-        },
-      });
-      expect(result).toEqual(expected);
-    });
-
-    it('throws when UDID is empty', async () => {
-      await expect(nanoMDMService.installProfile('', {})).rejects.toThrow(
-        'Device UDID is required',
-      );
-    });
-
-    it('throws when profile payload is missing', async () => {
-      await expect(nanoMDMService.installProfile('udid-1', null)).rejects.toThrow(
-        'Profile payload is required',
-      );
-    });
-  });
-
-  describe('removeProfile', () => {
-    it('sends a remove profile command', async () => {
-      const expected = { command_uuid: 'uuid-456' };
-      mockAxiosInstance.request.mockResolvedValue({ data: expected });
-
-      const result = await nanoMDMService.removeProfile('udid-1', 'com.example.profile');
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'POST',
-        url: '/v1/commands',
-        data: {
-          command: 'RemoveProfile',
-          device_udids: ['udid-1'],
-          profile_identifier: 'com.example.profile',
-        },
-      });
-      expect(result).toEqual(expected);
-    });
-
-    it('throws when UDID is empty', async () => {
-      await expect(nanoMDMService.removeProfile('', 'com.example.profile')).rejects.toThrow(
-        'Device UDID is required',
-      );
-    });
-
-    it('throws when profile identifier is missing', async () => {
-      await expect(nanoMDMService.removeProfile('udid-1', '')).rejects.toThrow(
-        'Profile identifier is required',
-      );
-    });
-  });
-
-  describe('sendCommand', () => {
-    it('sends a custom command with default device_udids', async () => {
-      const commandBody = { command: 'DeviceLock', pin: '1234' };
+    it('enqueues a command for a device', async () => {
       const expected = { command_uuid: 'uuid-789' };
       mockAxiosInstance.request.mockResolvedValue({ data: expected });
 
-      const result = await nanoMDMService.sendCommand('udid-1', commandBody);
+      const result = await nanoMDMService.enqueueCommand(enrollmentId, command);
 
       expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'POST',
-        url: '/v1/commands',
-        data: {
-          command: 'DeviceLock',
-          pin: '1234',
-          device_udids: ['udid-1'],
-        },
+        method: 'PUT',
+        url: '/v1/enqueue/enr-abc123',
+        data: command,
       });
       expect(result).toEqual(expected);
     });
 
-    it('uses existing device_udids from commandBody when present', async () => {
-      const commandBody = { command: 'DeviceLock', device_udids: ['udid-2', 'udid-3'] };
-      mockAxiosInstance.request.mockResolvedValue({ data: {} });
+    it('encodes the enrollment ID in the URL', async () => {
+      mockAxiosInstance.request.mockResolvedValue({ data: { command_uuid: 'uuid-abc' } });
 
-      await nanoMDMService.sendCommand('udid-1', commandBody);
+      await nanoMDMService.enqueueCommand('enr with spaces', command);
 
       expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'POST',
-        url: '/v1/commands',
-        data: {
-          command: 'DeviceLock',
-          device_udids: ['udid-2', 'udid-3'],
-        },
+        method: 'PUT',
+        url: '/v1/enqueue/enr%20with%20spaces',
+        data: command,
       });
     });
 
-    it('throws when UDID is missing', async () => {
-      await expect(nanoMDMService.sendCommand('', { command: 'DeviceLock' })).rejects.toThrow(
-        'Device UDID is required',
+    it('throws when enrollment ID is empty', async () => {
+      await expect(nanoMDMService.enqueueCommand('', command)).rejects.toThrow(
+        'Enrollment ID is required',
       );
     });
 
-    it('throws when command body is missing', async () => {
-      await expect(nanoMDMService.sendCommand('udid-1', null)).rejects.toThrow(
-        'Command body with a "command" field is required',
+    it('throws when enrollment ID is undefined', async () => {
+      await expect(nanoMDMService.enqueueCommand(undefined, command)).rejects.toThrow(
+        'Enrollment ID is required',
+      );
+    });
+
+    it('throws when command is missing', async () => {
+      await expect(nanoMDMService.enqueueCommand(enrollmentId, null)).rejects.toThrow(
+        'Command with a "command" field is required',
       );
     });
 
     it('throws when command field is missing', async () => {
-      await expect(nanoMDMService.sendCommand('udid-1', {})).rejects.toThrow(
-        'Command body with a "command" field is required',
+      await expect(nanoMDMService.enqueueCommand(enrollmentId, {})).rejects.toThrow(
+        'Command with a "command" field is required',
       );
     });
   });
 
-  describe('getCommand', () => {
-    it('fetches a command by UUID', async () => {
-      const expected = { command_uuid: 'uuid-123', status: 'Pending' };
+  describe('sendPush', () => {
+    it('sends an APNs push for a device', async () => {
+      const expected = { status: 'pushed' };
       mockAxiosInstance.request.mockResolvedValue({ data: expected });
 
-      const result = await nanoMDMService.getCommand('uuid-123');
+      const result = await nanoMDMService.sendPush('enr-abc123');
 
       expect(mockAxiosInstance.request).toHaveBeenCalledWith({
         method: 'GET',
-        url: '/v1/commands/uuid-123',
+        url: '/v1/push/enr-abc123',
       });
       expect(result).toEqual(expected);
     });
 
-    it('throws when command UUID is empty', async () => {
-      await expect(nanoMDMService.getCommand('')).rejects.toThrow('Command UUID is required');
+    it('encodes the enrollment ID in the URL', async () => {
+      mockAxiosInstance.request.mockResolvedValue({ data: {} });
+
+      await nanoMDMService.sendPush('enr special');
+
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
+        method: 'GET',
+        url: '/v1/push/enr%20special',
+      });
     });
 
-    it('throws when command UUID is undefined', async () => {
-      await expect(nanoMDMService.getCommand(undefined)).rejects.toThrow(
-        'Command UUID is required',
-      );
+    it('throws when enrollment ID is empty', async () => {
+      await expect(nanoMDMService.sendPush('')).rejects.toThrow('Enrollment ID is required');
+    });
+
+    it('throws when enrollment ID is undefined', async () => {
+      await expect(nanoMDMService.sendPush(undefined)).rejects.toThrow('Enrollment ID is required');
     });
   });
 
-  describe('getCommands', () => {
-    it('fetches commands without params', async () => {
-      const expected = { commands: [] };
+  describe('escrowKeyUnlock', () => {
+    it('unlocks an escrow key', async () => {
+      const expected = { status: 'unlocked' };
       mockAxiosInstance.request.mockResolvedValue({ data: expected });
 
-      const result = await nanoMDMService.getCommands();
+      const result = await nanoMDMService.escrowKeyUnlock('escrow-key-123');
 
       expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/commands',
-        params: {},
+        method: 'POST',
+        url: '/v1/escrowkeyunlock',
+        data: { escrow_key: 'escrow-key-123' },
       });
       expect(result).toEqual(expected);
     });
 
-    it('fetches commands with query params', async () => {
-      mockAxiosInstance.request.mockResolvedValue({ data: { commands: [] } });
-
-      await nanoMDMService.getCommands({ status: 'Pending', limit: 10 });
-
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/v1/commands',
-        params: { status: 'Pending', limit: 10 },
-      });
+    it('throws when escrow key is missing', async () => {
+      await expect(nanoMDMService.escrowKeyUnlock(null)).rejects.toThrow('Escrow key is required');
     });
   });
 
   describe('error handling', () => {
     it('maps 4xx errors to ExternalServiceError', async () => {
       const errorResponse = {
-        response: { status: 400, data: { message: 'Invalid device UDID' } },
-        config: { method: 'get', url: '/v1/devices/bad' },
+        response: { status: 400, data: { message: 'Invalid enrollment ID' } },
+        config: { method: 'put', url: '/v1/enqueue/bad' },
       };
       mockAxiosInstance.request.mockRejectedValue(errorResponse);
 
-      await expect(nanoMDMService.getDevice('bad')).rejects.toThrow(ExternalServiceError);
-      await expect(nanoMDMService.getDevice('bad')).rejects.toThrow('Invalid device UDID');
+      await expect(nanoMDMService.enqueueCommand('bad', { command: 'DeviceLock' })).rejects.toThrow(
+        ExternalServiceError,
+      );
+      await expect(nanoMDMService.enqueueCommand('bad', { command: 'DeviceLock' })).rejects.toThrow(
+        'Invalid enrollment ID',
+      );
     });
 
     it('maps 404 errors to ExternalServiceError', async () => {
       const errorResponse = {
-        response: { status: 404, data: { error: 'Device not found' } },
-        config: { method: 'get', url: '/v1/devices/nonexistent' },
+        response: { status: 404, data: { error: 'Enrollment not found' } },
+        config: { method: 'put', url: '/v1/enqueue/nonexistent' },
       };
       mockAxiosInstance.request.mockRejectedValue(errorResponse);
 
-      await expect(nanoMDMService.getDevice('nonexistent')).rejects.toThrow(ExternalServiceError);
-      await expect(nanoMDMService.getDevice('nonexistent')).rejects.toThrow('Device not found');
+      await expect(
+        nanoMDMService.enqueueCommand('nonexistent', { command: 'DeviceLock' }),
+      ).rejects.toThrow(ExternalServiceError);
+      await expect(
+        nanoMDMService.enqueueCommand('nonexistent', { command: 'DeviceLock' }),
+      ).rejects.toThrow('Enrollment not found');
     });
 
     it('maps timeout errors to ExternalServiceError', async () => {
       const errorResponse = {
         code: 'ECONNABORTED',
         message: 'timeout of 30000ms exceeded',
-        config: { method: 'post', url: '/v1/commands', timeout: 30000 },
+        config: { method: 'put', url: '/v1/enqueue/test', timeout: 30000 },
       };
       mockAxiosInstance.request.mockRejectedValue(errorResponse);
 
-      await expect(nanoMDMService.sendCommand('udid-1', { command: 'DeviceLock' })).rejects.toThrow(
-        ExternalServiceError,
-      );
-      await expect(nanoMDMService.sendCommand('udid-1', { command: 'DeviceLock' })).rejects.toThrow(
-        'NanoMDM request timed out',
-      );
+      await expect(
+        nanoMDMService.enqueueCommand('test', { command: 'DeviceLock' }),
+      ).rejects.toThrow(ExternalServiceError);
+      await expect(
+        nanoMDMService.enqueueCommand('test', { command: 'DeviceLock' }),
+      ).rejects.toThrow('NanoMDM request timed out');
     });
 
     it('maps connection refused errors to ExternalServiceError', async () => {
       const errorResponse = {
         code: 'ECONNREFUSED',
         message: 'connect ECONNREFUSED',
-        config: { method: 'get', url: '/v1/devices' },
+        config: { method: 'get', url: '/version' },
       };
       mockAxiosInstance.request.mockRejectedValue(errorResponse);
 
-      await expect(nanoMDMService.getDevices()).rejects.toThrow(ExternalServiceError);
-      await expect(nanoMDMService.getDevices()).rejects.toThrow('Cannot reach NanoMDM server');
+      await expect(nanoMDMService.getVersion()).rejects.toThrow(ExternalServiceError);
+      await expect(nanoMDMService.getVersion()).rejects.toThrow('Cannot reach NanoMDM server');
     });
 
     it('maps network errors without response to ExternalServiceError', async () => {
       const errorResponse = {
         message: 'Network Error',
-        config: { method: 'get', url: '/v1/devices' },
+        config: { method: 'get', url: '/version' },
       };
       mockAxiosInstance.request.mockRejectedValue(errorResponse);
 
-      await expect(nanoMDMService.getDevices()).rejects.toThrow(ExternalServiceError);
-      await expect(nanoMDMService.getDevices()).rejects.toThrow('NanoMDM request failed');
+      await expect(nanoMDMService.getVersion()).rejects.toThrow(ExternalServiceError);
+      await expect(nanoMDMService.getVersion()).rejects.toThrow('NanoMDM request failed');
     });
   });
 
@@ -649,41 +407,42 @@ describe('NanoMDMService', () => {
   describe('audit logging', () => {
     const db = require('../../../src/models');
 
-    it('creates audit log on successful GET /v1/devices', async () => {
+    it('creates audit log on successful GET /version', async () => {
       mockAxiosInstance.request.mockResolvedValue({
-        data: [{ udid: 'UDID-001' }],
+        data: { version: '1.0.0' },
         config: { _startTime: Date.now() },
       });
 
-      await nanoMDMService.getDevices();
+      await nanoMDMService.getVersion();
 
       expect(db.AuditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'nanomdm_get_devices',
-          entity_type: 'MDM_DEVICE',
+          action: 'nanomdm_get_version',
+          entity_type: 'MDM_SERVER',
           status: 'success',
           changes: expect.objectContaining({
             method: 'GET',
-            url: '/v1/devices',
+            url: '/version',
           }),
         }),
       );
     });
 
-    it('creates audit log on successful POST /v1/commands (install profile)', async () => {
+    it('creates audit log on successful PUT /v1/enqueue (install profile)', async () => {
       mockAxiosInstance.request.mockResolvedValue({
         data: { command_uuid: 'cmd-123' },
         config: { _startTime: Date.now() },
       });
 
-      await nanoMDMService.installProfile('UDID-001', {
-        PayloadIdentifier: 'com.example',
-        PayloadContent: {},
+      await nanoMDMService.enqueueCommand('enr-abc', {
+        command: 'InstallProfile',
+        device_udids: ['UDID-001'],
+        profile: { PayloadIdentifier: 'com.example', PayloadContent: {} },
       });
 
       expect(db.AuditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'nanomdm_install_profile',
+          action: 'nanomdm_enqueue_command',
           entity_type: 'MDM_COMMAND',
           entity_id: 'cmd-123',
           status: 'success',
@@ -694,56 +453,91 @@ describe('NanoMDMService', () => {
       );
     });
 
-    it('creates audit log on successful POST /v1/commands (remove profile)', async () => {
+    it('creates audit log on successful PUT /v1/enqueue (remove profile)', async () => {
       mockAxiosInstance.request.mockResolvedValue({
         data: { command_uuid: 'cmd-456' },
         config: { _startTime: Date.now() },
       });
 
-      await nanoMDMService.removeProfile('UDID-001', 'com.example.profile');
+      await nanoMDMService.enqueueCommand('enr-abc', {
+        command: 'RemoveProfile',
+        device_udids: ['UDID-001'],
+        profile_identifier: 'com.example.profile',
+      });
 
       expect(db.AuditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'nanomdm_remove_profile',
+          action: 'nanomdm_enqueue_command',
           entity_id: 'cmd-456',
           status: 'success',
         }),
       );
     });
 
-    it('creates audit log on successful GET /v1/profiles', async () => {
+    it('creates audit log on successful GET /v1/pushcert', async () => {
       mockAxiosInstance.request.mockResolvedValue({
-        data: { profiles: [] },
+        data: { subject: 'CN=...' },
         config: { _startTime: Date.now() },
       });
 
-      await nanoMDMService.getProfiles();
+      await nanoMDMService.getPushCertificate();
 
       expect(db.AuditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'nanomdm_get_profiles',
-          entity_type: 'MDM_PROFILE',
+          action: 'nanomdm_get_pushcert',
+          entity_type: 'MDM_CERTIFICATE',
           status: 'success',
         }),
       );
     });
 
-    it('creates audit log on successful POST /v1/profiles', async () => {
+    it('creates audit log on successful PUT /v1/pushcert', async () => {
       mockAxiosInstance.request.mockResolvedValue({
-        data: { profile_uuid: 'prof-123' },
+        data: { status: 'ok' },
         config: { _startTime: Date.now() },
       });
 
-      await nanoMDMService.createProfile({
-        PayloadIdentifier: 'com.example.camera',
-        PayloadContent: { allowCamera: false },
-      });
+      await nanoMDMService.uploadPushCertificate({ certificate: 'base64...', password: 'secret' });
 
       expect(db.AuditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'nanomdm_create_profile',
-          entity_type: 'MDM_PROFILE',
-          entity_id: 'com.example.camera',
+          action: 'nanomdm_upload_pushcert',
+          entity_type: 'MDM_CERTIFICATE',
+          status: 'success',
+        }),
+      );
+    });
+
+    it('creates audit log on successful GET /v1/push', async () => {
+      mockAxiosInstance.request.mockResolvedValue({
+        data: { status: 'pushed' },
+        config: { _startTime: Date.now() },
+      });
+
+      await nanoMDMService.sendPush('enr-abc');
+
+      expect(db.AuditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'nanomdm_send_push',
+          entity_type: 'MDM_DEVICE',
+          entity_id: 'enr-abc',
+          status: 'success',
+        }),
+      );
+    });
+
+    it('creates audit log on successful POST /v1/escrowkeyunlock', async () => {
+      mockAxiosInstance.request.mockResolvedValue({
+        data: { status: 'unlocked' },
+        config: { _startTime: Date.now() },
+      });
+
+      await nanoMDMService.escrowKeyUnlock('escrow-key-123');
+
+      expect(db.AuditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'nanomdm_escrow_key_unlock',
+          entity_type: 'MDM_COMMAND',
           status: 'success',
         }),
       );
@@ -754,12 +548,12 @@ describe('NanoMDMService', () => {
       networkError.code = 'ECONNABORTED';
       mockAxiosInstance.request.mockRejectedValue(networkError);
 
-      await expect(nanoMDMService.getDevices()).rejects.toThrow();
+      await expect(nanoMDMService.getVersion()).rejects.toThrow();
 
       const calls = db.AuditLog.create.mock.calls;
       const lastCall = calls[calls.length - 1][0];
 
-      expect(lastCall.action).toBe('nanomdm_get_devices');
+      expect(lastCall.action).toBe('nanomdm_get_version');
       expect(lastCall.status).toBe('failed');
       expect(lastCall.changes.failureReason).toBeTruthy();
     });
@@ -768,12 +562,12 @@ describe('NanoMDMService', () => {
       mockAxiosInstance.request.mockImplementation(() => {
         return new Promise((resolve) => {
           setTimeout(() => {
-            resolve({ data: [], config: { _startTime: Date.now() - 100 } });
+            resolve({ data: { version: '1.0.0' }, config: { _startTime: Date.now() - 100 } });
           }, 50);
         });
       });
 
-      await nanoMDMService.getDevices();
+      await nanoMDMService.getVersion();
 
       expect(db.AuditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({

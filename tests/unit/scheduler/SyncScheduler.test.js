@@ -1,29 +1,50 @@
-const mockFullSync = jest.fn();
 const mockGetPendingCommands = jest.fn();
 const mockUpdateCommandStatus = jest.fn();
-const mockGetCommand = jest.fn();
-const mockGetProfiles = jest.fn();
-const mockGetDevices = jest.fn();
+const mockGetVersion = jest.fn();
 const mockAuthenticate = jest.fn();
-
-jest.mock('../../../src/services/DeviceSyncService', () => ({
-  fullSync: (...args) => mockFullSync(...args),
-}));
+const mockMDMCommandFindAll = jest.fn();
+const mockAdeEnrollmentFindAll = jest.fn();
+const mockAuditLogDestroy = jest.fn();
+const mockAdeEnrollmentUpdate = jest.fn();
 
 jest.mock('../../../src/services/MDMCommandService', () => ({
   getPendingCommands: (...args) => mockGetPendingCommands(...args),
   updateCommandStatus: (...args) => mockUpdateCommandStatus(...args),
 }));
 
+jest.mock('../../../src/services/DeviceSyncService', () => ({}));
+
 jest.mock('../../../src/integrations/NanoMDMService', () => ({
-  getCommand: (...args) => mockGetCommand(...args),
-  getProfiles: (...args) => mockGetProfiles(...args),
-  getDevices: (...args) => mockGetDevices(...args),
+  getVersion: (...args) => mockGetVersion(...args),
 }));
 
 jest.mock('../../../src/models', () => ({
   sequelize: {
     authenticate: (...args) => mockAuthenticate(...args),
+  },
+  MDMCommand: {
+    findAll: (...args) => mockMDMCommandFindAll(...args),
+  },
+  AdeEnrollment: {
+    findAll: (...args) => mockAdeEnrollmentFindAll(...args),
+  },
+  AuditLog: {
+    destroy: (...args) => mockAuditLogDestroy(...args),
+  },
+}));
+
+jest.mock('sequelize', () => {
+  const actual = jest.requireActual('sequelize');
+  return {
+    ...actual,
+    Op: actual.Op,
+  };
+});
+
+jest.mock('../../../src/constants', () => ({
+  ADE_ENROLLMENT_STATUS: {
+    COMPLETED: 'completed',
+    FAILED: 'failed',
   },
 }));
 
@@ -66,36 +87,32 @@ describe('SyncScheduler', () => {
     });
 
     it('runs the first tick immediately on start', async () => {
-      mockFullSync.mockResolvedValue({ synced: 2 });
-      mockGetPendingCommands.mockResolvedValue([]);
-      mockGetProfiles.mockResolvedValue({ profiles: [] });
-      mockGetDevices.mockResolvedValue([]);
+      mockMDMCommandFindAll.mockResolvedValue([]);
+      mockAdeEnrollmentFindAll.mockResolvedValue([]);
+      mockAuditLogDestroy.mockResolvedValue(0);
+      mockGetVersion.mockResolvedValue({ version: '1.0.0' });
       mockAuthenticate.mockResolvedValue(undefined);
 
       scheduler = new SyncScheduler(5000);
       scheduler.start();
 
-      // Flush pending microtasks from the first tick
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(mockFullSync).toHaveBeenCalledTimes(1);
-      expect(mockGetPendingCommands).toHaveBeenCalledTimes(1);
-      expect(mockGetProfiles).toHaveBeenCalledTimes(1);
-      expect(mockGetDevices).toHaveBeenCalledTimes(1);
+      expect(mockGetVersion).toHaveBeenCalledTimes(1);
+      expect(mockAuthenticate).toHaveBeenCalledTimes(1);
     });
 
     it('runs subsequent ticks on interval', async () => {
-      mockFullSync.mockResolvedValue({ synced: 0 });
-      mockGetPendingCommands.mockResolvedValue([]);
-      mockGetProfiles.mockResolvedValue({ profiles: [] });
-      mockGetDevices.mockResolvedValue([]);
+      mockMDMCommandFindAll.mockResolvedValue([]);
+      mockAdeEnrollmentFindAll.mockResolvedValue([]);
+      mockAuditLogDestroy.mockResolvedValue(0);
+      mockGetVersion.mockResolvedValue({ version: '1.0.0' });
       mockAuthenticate.mockResolvedValue(undefined);
 
       scheduler = new SyncScheduler(100);
       scheduler.start();
 
-      // Flush first tick
       await Promise.resolve();
       await Promise.resolve();
 
@@ -103,7 +120,7 @@ describe('SyncScheduler', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(mockFullSync).toHaveBeenCalledTimes(2);
+      expect(mockGetVersion).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -134,112 +151,98 @@ describe('SyncScheduler', () => {
     });
   });
 
-  describe('_syncDevices', () => {
-    it('calls DeviceSyncService.fullSync', async () => {
-      mockFullSync.mockResolvedValue({ synced: 3 });
-
-      scheduler = new SyncScheduler(5000);
-      const result = await scheduler._syncDevices();
-
-      expect(mockFullSync).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ synced: 3 });
-    });
-  });
-
-  describe('_syncCommands', () => {
-    it('updates acknowledged commands based on NanoMDM response', async () => {
-      mockGetPendingCommands.mockResolvedValue([
-        { id: 'cmd-1', commandUuid: 'nano-1', status: 'sent' },
-        { id: 'cmd-2', commandUuid: 'nano-2', status: 'sent' },
-      ]);
-      mockGetCommand
-        .mockResolvedValueOnce({ command_uuid: 'nano-1', status: 'Acknowledged' })
-        .mockResolvedValueOnce({ command_uuid: 'nano-2', status: 'Error' });
-      mockUpdateCommandStatus.mockResolvedValue({});
-
-      scheduler = new SyncScheduler(5000);
-      const result = await scheduler._syncCommands();
-
-      expect(mockGetCommand).toHaveBeenCalledWith('nano-1');
-      expect(mockGetCommand).toHaveBeenCalledWith('nano-2');
-      expect(mockUpdateCommandStatus).toHaveBeenCalledWith('cmd-1', 'acknowledged', {
-        response_data: { command_uuid: 'nano-1', status: 'Acknowledged' },
-      });
-      expect(mockUpdateCommandStatus).toHaveBeenCalledWith('cmd-2', 'failed', {
-        response_data: { command_uuid: 'nano-2', status: 'Error' },
-      });
-      expect(result.synced).toBe(2);
-    });
-
-    it('does not update command when NanoMDM status is unmapped', async () => {
-      mockGetPendingCommands.mockResolvedValue([
-        { id: 'cmd-1', commandUuid: 'nano-1', status: 'sent' },
-      ]);
-      mockGetCommand.mockResolvedValue({ command_uuid: 'nano-1', status: 'Pending' });
-
-      scheduler = new SyncScheduler(5000);
-      await scheduler._syncCommands();
-
-      expect(mockUpdateCommandStatus).not.toHaveBeenCalled();
-    });
-
-    it('handles NanoMDM errors gracefully without crashing', async () => {
-      mockGetPendingCommands.mockResolvedValue([
-        { id: 'cmd-1', commandUuid: 'nano-1', status: 'sent' },
-      ]);
-      mockGetCommand.mockRejectedValue(new Error('NanoMDM timeout'));
-
-      scheduler = new SyncScheduler(5000);
-      const result = await scheduler._syncCommands();
-
-      expect(mockUpdateCommandStatus).not.toHaveBeenCalled();
-      expect(result.failed).toBe(1);
-    });
-
-    it('returns early when no pending commands', async () => {
-      mockGetPendingCommands.mockResolvedValue([]);
-
-      scheduler = new SyncScheduler(5000);
-      const result = await scheduler._syncCommands();
-
-      expect(result).toEqual({ synced: 0 });
-      expect(mockGetCommand).not.toHaveBeenCalled();
-    });
-
-    it('processes only up to MAX_COMMANDS_PER_TICK commands', async () => {
-      const commands = Array.from({ length: 25 }, (_, i) => ({
-        id: `cmd-${i}`,
-        commandUuid: `nano-${i}`,
+  describe('_retryFailedCommands', () => {
+    it('retries stale sent commands', async () => {
+      const staleCmd = {
+        id: 'cmd-1',
+        command_uuid: 'nano-1',
         status: 'sent',
-      }));
-      mockGetPendingCommands.mockResolvedValue(commands);
-      mockGetCommand.mockResolvedValue({ command_uuid: 'nano-x', status: 'Acknowledged' });
-      mockUpdateCommandStatus.mockResolvedValue({});
+        retry_count: 1,
+        max_retries: 3,
+        update: jest.fn().mockResolvedValue({}),
+      };
+      mockMDMCommandFindAll.mockResolvedValue([staleCmd]);
 
       scheduler = new SyncScheduler(5000);
-      const result = await scheduler._syncCommands();
+      const result = await scheduler._retryFailedCommands();
 
-      expect(mockGetCommand).toHaveBeenCalledTimes(20);
-      expect(result.synced).toBe(20);
-      expect(result.total).toBe(25);
+      expect(mockMDMCommandFindAll).toHaveBeenCalled();
+      expect(staleCmd.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          retry_count: expect.anything(),
+          status: 'queued',
+        }),
+      );
+      expect(result.retried).toBe(1);
+    });
+
+    it('handles empty stale command list', async () => {
+      mockMDMCommandFindAll.mockResolvedValue([]);
+
+      scheduler = new SyncScheduler(5000);
+      const result = await scheduler._retryFailedCommands();
+
+      expect(result.retried).toBe(0);
     });
   });
 
-  describe('_syncProfiles', () => {
-    it('fetches profiles from NanoMDM', async () => {
-      mockGetProfiles.mockResolvedValue({ profiles: [{ id: 'prof-1' }] });
+  describe('_cleanupExpiredEnrollments', () => {
+    it('expires stale enrollments', async () => {
+      const expiredEnrollment = {
+        id: 'enr-1',
+        status: 'pending',
+        update: mockAdeEnrollmentUpdate,
+      };
+      mockAdeEnrollmentFindAll.mockResolvedValue([expiredEnrollment]);
+      mockAdeEnrollmentUpdate.mockResolvedValue(expiredEnrollment);
 
       scheduler = new SyncScheduler(5000);
-      const result = await scheduler._syncProfiles();
+      const result = await scheduler._cleanupExpiredEnrollments();
 
-      expect(mockGetProfiles).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ profiles: [{ id: 'prof-1' }] });
+      expect(mockAdeEnrollmentFindAll).toHaveBeenCalled();
+      expect(mockAdeEnrollmentUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'failed',
+          last_error: 'Enrollment expired due to inactivity',
+        }),
+      );
+      expect(result.cleaned).toBe(1);
+    });
+
+    it('handles empty expired enrollment list', async () => {
+      mockAdeEnrollmentFindAll.mockResolvedValue([]);
+
+      scheduler = new SyncScheduler(5000);
+      const result = await scheduler._cleanupExpiredEnrollments();
+
+      expect(result.cleaned).toBe(0);
+    });
+  });
+
+  describe('_cleanupAuditLogs', () => {
+    it('deletes old audit logs', async () => {
+      mockAuditLogDestroy.mockResolvedValue(100);
+
+      scheduler = new SyncScheduler(5000);
+      const result = await scheduler._cleanupAuditLogs();
+
+      expect(mockAuditLogDestroy).toHaveBeenCalled();
+      expect(result.deleted).toBe(100);
+    });
+
+    it('handles cleanup errors gracefully', async () => {
+      mockAuditLogDestroy.mockRejectedValue(new Error('DB error'));
+
+      scheduler = new SyncScheduler(5000);
+      const result = await scheduler._cleanupAuditLogs();
+
+      expect(result.deleted).toBe(0);
     });
   });
 
   describe('_checkHealth', () => {
     it('reports healthy when both NanoMDM and DB are reachable', async () => {
-      mockGetDevices.mockResolvedValue([{ udid: 'test' }]);
+      mockGetVersion.mockResolvedValue({ version: '1.0.0' });
       mockAuthenticate.mockResolvedValue(undefined);
 
       scheduler = new SyncScheduler(5000);
@@ -251,7 +254,7 @@ describe('SyncScheduler', () => {
     });
 
     it('reports degraded when NanoMDM is unreachable', async () => {
-      mockGetDevices.mockRejectedValue(new Error('Connection refused'));
+      mockGetVersion.mockRejectedValue(new Error('Connection refused'));
       mockAuthenticate.mockResolvedValue(undefined);
 
       scheduler = new SyncScheduler(5000);
@@ -264,7 +267,7 @@ describe('SyncScheduler', () => {
     });
 
     it('reports degraded when DB is unreachable', async () => {
-      mockGetDevices.mockResolvedValue([{ udid: 'test' }]);
+      mockGetVersion.mockResolvedValue({ version: '1.0.0' });
       mockAuthenticate.mockRejectedValue(new Error('DB connection failed'));
 
       scheduler = new SyncScheduler(5000);
@@ -277,11 +280,11 @@ describe('SyncScheduler', () => {
   });
 
   describe('tick error isolation', () => {
-    it('continues other syncs when one fails', async () => {
-      mockFullSync.mockRejectedValue(new Error('Device sync crash'));
-      mockGetPendingCommands.mockResolvedValue([]);
-      mockGetProfiles.mockResolvedValue({ profiles: [] });
-      mockGetDevices.mockResolvedValue([]);
+    it('continues other tasks when one fails', async () => {
+      mockMDMCommandFindAll.mockRejectedValue(new Error('Command sync crash'));
+      mockAdeEnrollmentFindAll.mockResolvedValue([]);
+      mockAuditLogDestroy.mockResolvedValue(0);
+      mockGetVersion.mockResolvedValue({ version: '1.0.0' });
       mockAuthenticate.mockResolvedValue(undefined);
 
       scheduler = new SyncScheduler(5000);
@@ -290,19 +293,18 @@ describe('SyncScheduler', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(mockFullSync).toHaveBeenCalled();
-      expect(mockGetPendingCommands).toHaveBeenCalled();
-      expect(mockGetProfiles).toHaveBeenCalled();
-      expect(mockGetDevices).toHaveBeenCalled();
+      expect(mockGetVersion).toHaveBeenCalled();
+      expect(mockAuthenticate).toHaveBeenCalled();
+      expect(mockMDMCommandFindAll).toHaveBeenCalled();
     });
   });
 
   describe('graceful shutdown', () => {
     it('stops immediately when no operations in progress', async () => {
-      mockFullSync.mockResolvedValue({ synced: 0 });
-      mockGetPendingCommands.mockResolvedValue([]);
-      mockGetProfiles.mockResolvedValue({ profiles: [] });
-      mockGetDevices.mockResolvedValue([]);
+      mockMDMCommandFindAll.mockResolvedValue([]);
+      mockAdeEnrollmentFindAll.mockResolvedValue([]);
+      mockAuditLogDestroy.mockResolvedValue(0);
+      mockGetVersion.mockResolvedValue({ version: '1.0.0' });
       mockAuthenticate.mockResolvedValue(undefined);
 
       scheduler = new SyncScheduler(5000);
@@ -319,26 +321,24 @@ describe('SyncScheduler', () => {
     });
 
     it('waits for in-flight operations on shutdown', async () => {
-      let resolveDeviceSync;
-      const deviceSyncPromise = new Promise((resolve) => {
-        resolveDeviceSync = () => resolve({ synced: 1 });
+      let resolveHealthCheck;
+      const healthCheckPromise = new Promise((resolve) => {
+        resolveHealthCheck = () => resolve({ status: 'healthy', nanoMDM: true, database: true });
       });
-      mockFullSync.mockReturnValue(deviceSyncPromise);
-      mockGetPendingCommands.mockResolvedValue([]);
-      mockGetProfiles.mockResolvedValue({ profiles: [] });
-      mockGetDevices.mockResolvedValue([]);
+      mockGetVersion.mockReturnValue(healthCheckPromise);
       mockAuthenticate.mockResolvedValue(undefined);
+      mockMDMCommandFindAll.mockResolvedValue([]);
+      mockAdeEnrollmentFindAll.mockResolvedValue([]);
+      mockAuditLogDestroy.mockResolvedValue(0);
 
       scheduler = new SyncScheduler(5000);
       scheduler.start();
 
-      // Let the first tick start but not complete
       await Promise.resolve();
 
       const stopPromise = scheduler.stop(500);
 
-      // Resolve running operations
-      resolveDeviceSync();
+      resolveHealthCheck();
 
       await stopPromise;
 

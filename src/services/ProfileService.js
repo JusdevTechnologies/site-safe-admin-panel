@@ -3,64 +3,126 @@ const logger = require('../utils/logger');
 const NanoMDMService = require('../integrations/NanoMDMService');
 const NotFoundError = require('../exceptions/NotFoundError');
 const ConflictError = require('../exceptions/ConflictError');
+const ExternalServiceError = require('../exceptions/ExternalServiceError');
 const FirebaseService = require('../integrations/FirebaseService');
 
 class ProfileService {
-  /**
-   * Create a new MDM profile in NanoMDM.
-   * @param {Object} profileData - Profile payload (must include PayloadIdentifier, PayloadContent)
-   */
-  async createProfile(profileData) {
-    logger.info('[ProfileService] Creating profile');
-
-    const result = await NanoMDMService.createProfile(profileData);
-    const identifier = profileData.PayloadIdentifier;
-
-    logger.info(`[ProfileService] Profile created: ${identifier}`);
-    return this._formatProfile(result, profileData);
+  async _getEnrollmentId(udid) {
+    const device = await db.Device.findOne({
+      where: { device_identifier: udid },
+      paranoid: false,
+    });
+    if (!device) {
+      throw new NotFoundError(`Device ${udid} not found in local database`);
+    }
+    const enrollmentId = device.device_info && device.device_info.nanomdm_enrollment_id;
+    if (!enrollmentId) {
+      throw new ExternalServiceError(
+        `No NanoMDM enrollment ID found for device ${udid}. Device may not have completed MDM enrollment.`,
+      );
+    }
+    return { enrollmentId, device };
   }
 
-  /**
-   * Update an existing MDM profile in NanoMDM.
-   * @param {string} identifier - Profile identifier (e.g. com.example.profile)
-   * @param {Object} profileData - Updated profile payload
-   */
+  async createProfile(profileData) {
+    logger.info(`[ProfileService] Profile registered: ${profileData.PayloadIdentifier}`);
+    return this._formatProfile({}, profileData);
+  }
+
   async updateProfile(identifier, profileData) {
     if (!identifier) {
       throw new NotFoundError('Profile identifier is required for update');
     }
-
-    logger.info(`[ProfileService] Updating profile: ${identifier}`);
-
-    const result = await NanoMDMService.updateProfile(identifier, profileData);
-
-    logger.info(`[ProfileService] Profile updated: ${identifier}`);
-    return this._formatProfile(result, { ...profileData, PayloadIdentifier: identifier });
+    logger.info(`[ProfileService] Profile update acknowledged: ${identifier}`);
+    return this._formatProfile({}, { ...profileData, PayloadIdentifier: identifier });
   }
 
-  /**
-   * Delete an MDM profile from NanoMDM.
-   * @param {string} identifier - Profile identifier
-   */
   async deleteProfile(identifier) {
     if (!identifier) {
       throw new NotFoundError('Profile identifier is required for deletion');
     }
-
-    logger.info(`[ProfileService] Deleting profile: ${identifier}`);
-
-    const result = await NanoMDMService.deleteProfile(identifier);
-
-    logger.info(`[ProfileService] Profile deleted: ${identifier}`);
-    return result;
+    logger.info(`[ProfileService] Profile deletion acknowledged: ${identifier}`);
+    return { deleted: true, identifier };
   }
 
-  /**
-   * Assign (install) a profile on a device.
-   * Creates a DevicePolicy record locally to track the assignment.
-   * @param {string} udid - Device UDID
-   * @param {Object} profilePayload - Profile payload to install
-   */
+  async getProfiles(params = {}) {
+    logger.info('[ProfileService] Querying installed profiles from database');
+
+    const where = { is_active: true };
+
+    if (params.filter && params.filter.udid) {
+      const device = await db.Device.findOne({
+        where: { device_identifier: params.filter.udid },
+        paranoid: false,
+      });
+      if (device) {
+        where.device_id = device.id;
+      } else {
+        return { profiles: [] };
+      }
+    }
+
+    const policies = await db.DevicePolicy.findAll({
+      where,
+      include: [
+        {
+          model: db.Device,
+          attributes: ['id', 'device_identifier', 'device_name', 'serial_number'],
+          paranoid: false,
+        },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    const profiles = policies.map((p) => ({
+      PayloadIdentifier: p.policy_type,
+      PayloadDisplayName: p.policy_details?.PayloadDisplayName || p.policy_type,
+      PayloadOrganization: p.policy_details?.PayloadOrganization || null,
+      PayloadDescription: p.policy_details?.PayloadDescription || null,
+      device_identifier: p.Device?.device_identifier || null,
+      device_name: p.Device?.device_name || null,
+      is_active: p.is_active,
+      applied_at: p.applied_at,
+    }));
+
+    return { profiles };
+  }
+
+  async getProfile(identifier) {
+    if (!identifier) {
+      throw new NotFoundError('Profile identifier is required');
+    }
+
+    logger.info(`[ProfileService] Getting profile: ${identifier}`);
+
+    const policy = await db.DevicePolicy.findOne({
+      where: { policy_type: identifier, is_active: true },
+      include: [
+        {
+          model: db.Device,
+          attributes: ['id', 'device_identifier', 'device_name', 'serial_number'],
+          paranoid: false,
+        },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    if (!policy) {
+      throw new NotFoundError(`Profile ${identifier} not found in local database`);
+    }
+
+    return {
+      PayloadIdentifier: policy.policy_type,
+      PayloadDisplayName: policy.policy_details?.PayloadDisplayName || policy.policy_type,
+      PayloadOrganization: policy.policy_details?.PayloadOrganization || null,
+      PayloadDescription: policy.policy_details?.PayloadDescription || null,
+      device_identifier: policy.Device?.device_identifier || null,
+      device_name: policy.Device?.device_name || null,
+      is_active: policy.is_active,
+      applied_at: policy.applied_at,
+    };
+  }
+
   async assignProfile(udid, profilePayload) {
     if (!udid) {
       throw new NotFoundError('Device UDID is required to assign a profile');
@@ -73,56 +135,55 @@ class ProfileService {
       `[ProfileService] Assigning profile ${profilePayload.PayloadIdentifier} to device ${udid}`,
     );
 
-    const localDevice = await db.Device.findOne({
-      where: { device_identifier: udid },
-      paranoid: false,
-    });
+    const { enrollmentId, device: localDevice } = await this._getEnrollmentId(udid);
 
-    const result = await NanoMDMService.installProfile(udid, profilePayload);
-
-    if (localDevice) {
-      const existingPolicy = await db.DevicePolicy.findOne({
-        where: {
-          device_id: localDevice.id,
-          policy_type: profilePayload.PayloadIdentifier,
-          is_active: true,
-        },
-      });
-
-      if (existingPolicy) {
-        throw new ConflictError(
-          `Profile ${profilePayload.PayloadIdentifier} is already assigned to device ${udid}`,
-        );
-      }
-
-      await db.DevicePolicy.create({
+    const existingPolicy = await db.DevicePolicy.findOne({
+      where: {
         device_id: localDevice.id,
         policy_type: profilePayload.PayloadIdentifier,
-        policy_details: profilePayload,
         is_active: true,
-        applied_at: new Date(),
-      });
+      },
+    });
 
-      logger.info(
-        `[ProfileService] DevicePolicy record created for device ${localDevice.id}, profile ${profilePayload.PayloadIdentifier}`,
-      );
-
-      this._sendProfileInstalledNotification(localDevice, profilePayload.PayloadIdentifier);
-    } else {
-      logger.warn(
-        `[ProfileService] No local device found for UDID ${udid} — DevicePolicy record not created`,
+    if (existingPolicy) {
+      throw new ConflictError(
+        `Profile ${profilePayload.PayloadIdentifier} is already assigned to device ${udid}`,
       );
     }
+
+    const commandPayload = {
+      command: 'InstallProfile',
+      device_udids: [udid],
+      profile: profilePayload,
+    };
+
+    const result = await NanoMDMService.enqueueCommand(enrollmentId, commandPayload);
+
+    try {
+      await NanoMDMService.sendPush(enrollmentId);
+    } catch (pushError) {
+      logger.warn(
+        `[ProfileService] APNs push failed for ${enrollmentId} (non-fatal): ${pushError.message}`,
+      );
+    }
+
+    await db.DevicePolicy.create({
+      device_id: localDevice.id,
+      policy_type: profilePayload.PayloadIdentifier,
+      policy_details: profilePayload,
+      is_active: true,
+      applied_at: new Date(),
+    });
+
+    logger.info(
+      `[ProfileService] DevicePolicy record created for device ${localDevice.id}, profile ${profilePayload.PayloadIdentifier}`,
+    );
+
+    this._sendProfileInstalledNotification(localDevice, profilePayload.PayloadIdentifier);
 
     return result;
   }
 
-  /**
-   * Remove a profile from a device.
-   * Updates the local DevicePolicy record to mark it inactive.
-   * @param {string} udid - Device UDID
-   * @param {string} profileIdentifier - Profile identifier to remove
-   */
   async removeProfile(udid, profileIdentifier) {
     if (!udid) {
       throw new NotFoundError('Device UDID is required to remove a profile');
@@ -133,59 +194,40 @@ class ProfileService {
 
     logger.info(`[ProfileService] Removing profile ${profileIdentifier} from device ${udid}`);
 
-    const localDevice = await db.Device.findOne({
-      where: { device_identifier: udid },
-      paranoid: false,
+    const { enrollmentId, device: localDevice } = await this._getEnrollmentId(udid);
+
+    const commandPayload = {
+      command: 'RemoveProfile',
+      device_udids: [udid],
+      profile_identifier: profileIdentifier,
+    };
+
+    const result = await NanoMDMService.enqueueCommand(enrollmentId, commandPayload);
+
+    try {
+      await NanoMDMService.sendPush(enrollmentId);
+    } catch (pushError) {
+      logger.warn(
+        `[ProfileService] APNs push failed for ${enrollmentId} (non-fatal): ${pushError.message}`,
+      );
+    }
+
+    const policy = await db.DevicePolicy.findOne({
+      where: {
+        device_id: localDevice.id,
+        policy_type: profileIdentifier,
+        is_active: true,
+      },
     });
 
-    const result = await NanoMDMService.removeProfile(udid, profileIdentifier);
-
-    if (localDevice) {
-      const policy = await db.DevicePolicy.findOne({
-        where: {
-          device_id: localDevice.id,
-          policy_type: profileIdentifier,
-          is_active: true,
-        },
-      });
-
-      if (policy) {
-        await policy.update({ is_active: false });
-        logger.info(
-          `[ProfileService] DevicePolicy ${policy.id} marked inactive for device ${localDevice.id}`,
-        );
-      }
-
-      this._sendProfileRemovedNotification(localDevice, profileIdentifier);
+    if (policy) {
+      await policy.update({ is_active: false });
+      logger.info(
+        `[ProfileService] DevicePolicy ${policy.id} marked inactive for device ${localDevice.id}`,
+      );
     }
 
-    return result;
-  }
-
-  /**
-   * Query profiles from NanoMDM with optional filters.
-   * @param {Object} params - Query parameters (e.g. { limit, page, filter })
-   */
-  async getProfiles(params = {}) {
-    logger.info('[ProfileService] Querying profiles');
-
-    const result = await NanoMDMService.getProfiles(params);
-
-    return result;
-  }
-
-  /**
-   * Get a single profile by identifier from NanoMDM.
-   * @param {string} identifier - Profile identifier
-   */
-  async getProfile(identifier) {
-    if (!identifier) {
-      throw new NotFoundError('Profile identifier is required');
-    }
-
-    logger.info(`[ProfileService] Getting profile: ${identifier}`);
-
-    const result = await NanoMDMService.getProfile(identifier);
+    this._sendProfileRemovedNotification(localDevice, profileIdentifier);
 
     return result;
   }

@@ -1,17 +1,11 @@
-jest.mock('../../../src/integrations/NanoMDMService', () => ({
-  getDevices: jest.fn(),
-  getDevice: jest.fn(),
-}));
-
 jest.mock('../../../src/models', () => ({
   Device: {
-    findAll: jest.fn(),
     findOne: jest.fn(),
+    create: jest.fn(),
   },
 }));
 
 const DeviceSyncService = require('../../../src/services/DeviceSyncService');
-const mockNanoMDMService = require('../../../src/integrations/NanoMDMService');
 const db = require('../../../src/models');
 
 const mockDeviceUpdate = jest.fn();
@@ -31,6 +25,7 @@ const mockDeviceInstance = (overrides = {}) => ({
   last_sync: null,
   push_notification_token: null,
   notification_platform: null,
+  device_info: null,
   deleted_at: null,
   update: mockDeviceUpdate,
   ...overrides,
@@ -45,309 +40,152 @@ describe('DeviceSyncService', () => {
     });
   });
 
-  describe('_mapNanoMDMDevice', () => {
-    it('maps all fields from a NanoMDM device', () => {
-      const nanoDevice = {
-        udid: 'abc-123',
-        serial_number: 'F1GH2J3K',
-        device_name: 'John iPhone',
-        platform: 'ios',
-        last_seen: '2026-07-13T10:00:00.000Z',
-        supervised: true,
-        push_token: 'fcm-token-xyz',
-      };
+  describe('updateDeviceFromCheckIn', () => {
+    const checkInData = {
+      udid: 'UDID-001',
+      serialNumber: 'SN-12345',
+      deviceName: 'John iPhone',
+      model: 'iPhone14,2',
+      productType: 'iPhone',
+      osVersion: '17.5.1',
+      buildVersion: '21F90',
+      pushToken: 'apns-token-xyz',
+      pushMagic: 'push-magic-abc',
+      enrollmentId: 'enr-abc-123',
+    };
 
-      const result = DeviceSyncService._mapNanoMDMDevice(nanoDevice);
+    it('creates a new device when one does not exist', async () => {
+      db.Device.findOne.mockResolvedValue(null);
+      db.Device.create.mockResolvedValue(mockDeviceInstance(checkInData));
 
-      expect(result).toEqual({
-        device_identifier: 'abc-123',
-        serial_number: 'F1GH2J3K',
-        device_name: 'John iPhone',
-        device_os: 'ios',
-        last_sync: new Date('2026-07-13T10:00:00.000Z'),
-        supervised: true,
-        push_notification_token: 'fcm-token-xyz',
+      const result = await DeviceSyncService.updateDeviceFromCheckIn(checkInData);
+
+      expect(db.Device.findOne).toHaveBeenCalledTimes(2);
+      expect(db.Device.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          device_identifier: 'UDID-001',
+          serial_number: 'SN-12345',
+          device_name: 'John iPhone',
+          device_os: 'ios',
+          status: 'active',
+          device_info: {
+            nanomdm_enrollment_id: 'enr-abc-123',
+            push_magic: 'push-magic-abc',
+            model: 'iPhone14,2',
+            product_type: 'iPhone',
+            os_version: '17.5.1',
+            build_version: '21F90',
+          },
+        }),
+      );
+      expect(result).toBeTruthy();
+    });
+
+    it('updates an existing device by UDID', async () => {
+      const existingDevice = mockDeviceInstance();
+      db.Device.findOne.mockResolvedValue(existingDevice);
+
+      const result = await DeviceSyncService.updateDeviceFromCheckIn(checkInData);
+
+      expect(mockDeviceUpdate).toHaveBeenCalled();
+      const updateCall = mockDeviceUpdate.mock.calls[0][0];
+      expect(updateCall.device_name).toBe('John iPhone');
+      expect(updateCall.serial_number).toBe('SN-12345');
+      expect(updateCall.push_notification_token).toBe('apns-token-xyz');
+      expect(updateCall.device_info).toEqual({
+        nanomdm_enrollment_id: 'enr-abc-123',
+        push_magic: 'push-magic-abc',
+        model: 'iPhone14,2',
+        product_type: 'iPhone',
+        os_version: '17.5.1',
+        build_version: '21F90',
+      });
+      expect(result).toBe(existingDevice);
+    });
+
+    it('looks up by serial number when UDID is not provided', async () => {
+      const dataWithoutUdid = { ...checkInData, udid: null };
+      db.Device.findOne.mockResolvedValue(null);
+
+      await DeviceSyncService.updateDeviceFromCheckIn(dataWithoutUdid);
+
+      expect(db.Device.findOne).toHaveBeenCalledWith({
+        where: { device_identifier: 'SN-12345' },
+        paranoid: false,
       });
     });
 
-    it('returns null for null input', () => {
-      expect(DeviceSyncService._mapNanoMDMDevice(null)).toBeNull();
+    it('returns null when both udid and serialNumber are missing', async () => {
+      const result = await DeviceSyncService.updateDeviceFromCheckIn({});
+      expect(result).toBeNull();
     });
 
-    it('returns null for undefined input', () => {
-      expect(DeviceSyncService._mapNanoMDMDevice(undefined)).toBeNull();
-    });
-
-    it('returns null for device without udid', () => {
-      expect(DeviceSyncService._mapNanoMDMDevice({ device_name: 'No UDID' })).toBeNull();
-    });
-
-    it('handles missing optional fields', () => {
-      const result = DeviceSyncService._mapNanoMDMDevice({ udid: 'abc' });
-
-      expect(result).toEqual({
-        device_identifier: 'abc',
+    it('preserves existing device_info fields when merging', async () => {
+      const existingDevice = mockDeviceInstance({
+        device_info: {
+          existing_field: 'keep-me',
+          push_magic: 'old-magic',
+        },
       });
-      expect(result.serial_number).toBeUndefined();
-      expect(result.device_name).toBeUndefined();
-      expect(result.last_sync).toBeUndefined();
-      expect(result.device_os).toBeUndefined();
-      expect(result.supervised).toBeUndefined();
-      expect(result.push_notification_token).toBeUndefined();
+      db.Device.findOne.mockResolvedValue(existingDevice);
+
+      await DeviceSyncService.updateDeviceFromCheckIn(checkInData);
+
+      const updateCall = mockDeviceUpdate.mock.calls[0][0];
+      expect(updateCall.device_info.existing_field).toBe('keep-me');
+      expect(updateCall.device_info.push_magic).toBe('push-magic-abc');
+      expect(updateCall.device_info.nanomdm_enrollment_id).toBe('enr-abc-123');
     });
 
-    it('only accepts ios or android for platform', () => {
-      const ios = DeviceSyncService._mapNanoMDMDevice({ udid: '1', platform: 'ios' });
-      expect(ios.device_os).toBe('ios');
+    it('updates last_sync on every check-in', async () => {
+      const existingDevice = mockDeviceInstance();
+      db.Device.findOne.mockResolvedValue(existingDevice);
 
-      const android = DeviceSyncService._mapNanoMDMDevice({ udid: '2', platform: 'android' });
-      expect(android.device_os).toBe('android');
+      await DeviceSyncService.updateDeviceFromCheckIn(checkInData);
 
-      const windows = DeviceSyncService._mapNanoMDMDevice({ udid: '3', platform: 'windows' });
-      expect(windows.device_os).toBeUndefined();
-    });
-
-    it('coerces serial_number to string', () => {
-      const result = DeviceSyncService._mapNanoMDMDevice({
-        udid: 'abc',
-        serial_number: 12345,
-      });
-      expect(result.serial_number).toBe('12345');
-    });
-
-    it('coerces push_token to string', () => {
-      const result = DeviceSyncService._mapNanoMDMDevice({
-        udid: 'abc',
-        push_token: 98765,
-      });
-      expect(result.push_notification_token).toBe('98765');
+      expect(mockDeviceUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          last_sync: expect.any(Date),
+        }),
+      );
     });
   });
 
   describe('_updateDevice', () => {
-    it('updates sync-allowed fields only', async () => {
-      const device = mockDeviceInstance();
+    it('updates allowed fields and merges device_info', async () => {
+      const device = mockDeviceInstance({ device_info: { existing: 'data' } });
       const syncData = {
-        device_identifier: 'UDID-001',
-        serial_number: 'SN-123',
         device_name: 'Updated Name',
-        device_os: 'android',
+        serial_number: 'SN-NEW',
+        device_os: 'ios',
         supervised: true,
-        last_sync: new Date('2026-07-13T12:00:00Z'),
         push_notification_token: 'new-token',
+        notification_platform: 'apns',
+        last_sync: new Date(),
+        device_info: { new_field: 'value' },
       };
 
       await DeviceSyncService._updateDevice(device, syncData);
 
       expect(mockDeviceUpdate).toHaveBeenCalledWith({
-        serial_number: 'SN-123',
         device_name: 'Updated Name',
-        last_sync: new Date('2026-07-13T12:00:00Z'),
-        push_notification_token: 'new-token',
-        device_os: 'android',
+        serial_number: 'SN-NEW',
+        device_os: 'ios',
         supervised: true,
+        push_notification_token: 'new-token',
+        notification_platform: 'apns',
+        last_sync: syncData.last_sync,
+        device_info: { existing: 'data', new_field: 'value' },
       });
     });
 
-    it('does not overwrite locally managed camera fields', async () => {
-      const device = mockDeviceInstance({
-        camera_blocked: true,
-        camera_blocked_by: 'admin-uuid',
-        camera_blocked_at: new Date(),
-      });
-      const syncData = DeviceSyncService._mapNanoMDMDevice({
-        udid: 'UDID-001',
-        device_name: 'Updated',
-      });
-
-      await DeviceSyncService._updateDevice(device, syncData);
-
-      expect(device.camera_blocked).toBe(true);
-      expect(device.camera_blocked_by).toBe('admin-uuid');
-      expect(device.camera_blocked_at).toBeTruthy();
-    });
-
-    it('does not overwrite employee_id', async () => {
-      const device = mockDeviceInstance({ employee_id: 'emp-001' });
-      const syncData = DeviceSyncService._mapNanoMDMDevice({
-        udid: 'UDID-001',
-        device_name: 'Updated',
-      });
-
-      await DeviceSyncService._updateDevice(device, syncData);
-
-      expect(device.employee_id).toBe('emp-001');
-    });
-
-    it('does not overwrite device status', async () => {
-      const device = mockDeviceInstance({ status: 'blocked' });
-      const syncData = DeviceSyncService._mapNanoMDMDevice({
-        udid: 'UDID-001',
-        device_name: 'Updated',
-      });
-
-      await DeviceSyncService._updateDevice(device, syncData);
-
-      expect(device.status).toBe('blocked');
-    });
-
-    it('does not update when syncData has no syncable fields', async () => {
+    it('does not update when syncData has no updatable fields', async () => {
       const device = mockDeviceInstance();
       const syncData = { device_identifier: 'UDID-001' };
 
       await DeviceSyncService._updateDevice(device, syncData);
 
       expect(mockDeviceUpdate).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('syncDevice', () => {
-    it('syncs a single device by UDID', async () => {
-      const nanoDevice = {
-        udid: 'UDID-001',
-        device_name: 'Synced iPhone',
-        serial_number: 'SN-999',
-        platform: 'ios',
-        last_seen: '2026-07-13T10:00:00Z',
-        supervised: true,
-      };
-
-      mockNanoMDMService.getDevice.mockResolvedValue(nanoDevice);
-      db.Device.findOne.mockResolvedValue(mockDeviceInstance());
-
-      const result = await DeviceSyncService.syncDevice('UDID-001');
-
-      expect(mockNanoMDMService.getDevice).toHaveBeenCalledWith('UDID-001');
-      expect(db.Device.findOne).toHaveBeenCalledWith({
-        where: { device_identifier: 'UDID-001' },
-        paranoid: false,
-      });
-      expect(mockDeviceUpdate).toHaveBeenCalled();
-      expect(result).toEqual({ synced: 1, skipped: 0, errors: 0 });
-    });
-
-    it('skips when no local device matches', async () => {
-      mockNanoMDMService.getDevice.mockResolvedValue({ udid: 'UNKNOWN' });
-      db.Device.findOne.mockResolvedValue(null);
-
-      const result = await DeviceSyncService.syncDevice('UNKNOWN');
-
-      expect(result).toEqual({ synced: 0, skipped: 1, errors: 0 });
-    });
-
-    it('throws when NanoMDM call fails', async () => {
-      mockNanoMDMService.getDevice.mockRejectedValue(new Error('NanoMDM error'));
-
-      await expect(DeviceSyncService.syncDevice('UDID-001')).rejects.toThrow('NanoMDM error');
-    });
-  });
-
-  describe('fullSync', () => {
-    it('syncs all devices from NanoMDM', async () => {
-      const nanoDevices = {
-        devices: [
-          { udid: 'UDID-001', device_name: 'iPhone 1', platform: 'ios' },
-          { udid: 'UDID-002', device_name: 'iPhone 2', platform: 'ios' },
-        ],
-      };
-
-      mockNanoMDMService.getDevices.mockResolvedValue(nanoDevices);
-      db.Device.findAll.mockResolvedValue([
-        mockDeviceInstance({ device_identifier: 'UDID-001' }),
-        mockDeviceInstance({ id: 'device-uuid-2', device_identifier: 'UDID-002' }),
-      ]);
-
-      const result = await DeviceSyncService.fullSync();
-
-      expect(mockNanoMDMService.getDevices).toHaveBeenCalledWith({ limit: 1000 });
-      expect(result).toEqual({ synced: 2, skipped: 0, errors: 0 });
-    });
-
-    it('returns zeros when NanoMDM returns empty list', async () => {
-      mockNanoMDMService.getDevices.mockResolvedValue({ devices: [] });
-
-      const result = await DeviceSyncService.fullSync();
-
-      expect(result).toEqual({ synced: 0, skipped: 0, errors: 0 });
-      expect(db.Device.findAll).not.toHaveBeenCalled();
-    });
-
-    it('throws on NanoMDM API errors', async () => {
-      mockNanoMDMService.getDevices.mockRejectedValue(new Error('API unavailable'));
-
-      await expect(DeviceSyncService.fullSync()).rejects.toThrow('API unavailable');
-    });
-
-    it('skips NanoMDM devices that have no local match', async () => {
-      mockNanoMDMService.getDevices.mockResolvedValue({
-        devices: [
-          { udid: 'UDID-001', device_name: 'Known' },
-          { udid: 'UDID-999', device_name: 'Unknown' },
-        ],
-      });
-      db.Device.findAll.mockResolvedValue([mockDeviceInstance({ device_identifier: 'UDID-001' })]);
-
-      const result = await DeviceSyncService.fullSync();
-
-      expect(result).toEqual({ synced: 1, skipped: 1, errors: 0 });
-    });
-
-    it('skips NanoMDM devices without UDID', async () => {
-      mockNanoMDMService.getDevices.mockResolvedValue({
-        devices: [{ udid: 'UDID-001', device_name: 'Good' }, { device_name: 'No UDID' }, null],
-      });
-      db.Device.findAll.mockResolvedValue([mockDeviceInstance({ device_identifier: 'UDID-001' })]);
-
-      const result = await DeviceSyncService.fullSync();
-
-      expect(db.Device.findAll).toHaveBeenCalledWith({
-        where: { device_identifier: ['UDID-001'] },
-        paranoid: false,
-      });
-      expect(result).toEqual({ synced: 1, skipped: 2, errors: 0 });
-    });
-  });
-
-  describe('incrementalSync', () => {
-    it('syncs devices modified since given date', async () => {
-      const since = '2026-07-12T00:00:00.000Z';
-      mockNanoMDMService.getDevices.mockResolvedValue({
-        devices: [{ udid: 'UDID-001', device_name: 'Updated iPhone' }],
-      });
-      db.Device.findAll.mockResolvedValue([mockDeviceInstance()]);
-
-      const result = await DeviceSyncService.incrementalSync(since);
-
-      expect(mockNanoMDMService.getDevices).toHaveBeenCalledWith({
-        limit: 1000,
-        since,
-      });
-      expect(result).toEqual({ synced: 1, skipped: 0, errors: 0 });
-    });
-
-    it('uses default 24h window when no since provided', async () => {
-      const now = Date.now();
-      const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
-
-      mockNanoMDMService.getDevices.mockResolvedValue({ devices: [] });
-      db.Device.findAll.mockResolvedValue([]);
-
-      await DeviceSyncService.incrementalSync();
-
-      const calls = mockNanoMDMService.getDevices.mock.calls[0][0];
-      expect(calls.since).toBeDefined();
-      const sinceTime = new Date(calls.since).getTime();
-      expect(sinceTime).toBeGreaterThanOrEqual(twentyFourHoursAgo - 1000);
-      expect(sinceTime).toBeLessThanOrEqual(now);
-    });
-
-    it('returns zeros when no recently modified devices', async () => {
-      mockNanoMDMService.getDevices.mockResolvedValue({ devices: [] });
-
-      const result = await DeviceSyncService.incrementalSync('2026-07-12T00:00:00Z');
-
-      expect(result).toEqual({ synced: 0, skipped: 0, errors: 0 });
-      expect(db.Device.findAll).not.toHaveBeenCalled();
     });
   });
 });

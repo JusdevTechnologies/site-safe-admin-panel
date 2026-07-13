@@ -1,14 +1,29 @@
+const db = require('../models');
 const NanoMDMService = require('../integrations/NanoMDMService');
 const ProfileService = require('../services/ProfileService');
 const MDMCommandService = require('../services/MDMCommandService');
+const DeviceService = require('../services/DeviceService');
 const { formatResponse, paginate } = require('../utils/helpers');
 
 class MDMController {
   async getDevices(req, res, next) {
     try {
-      const result = await NanoMDMService.getDevices(req.query);
+      const pagination = paginate(req.query.page, req.query.limit || 20);
+      const filters = {
+        search: req.query.search,
+        status: req.query.status,
+        os: req.query.os,
+      };
 
-      res.status(200).json(formatResponse(result, 'MDM devices retrieved successfully'));
+      const result = await DeviceService.getAdminDeviceList(pagination, filters);
+
+      res.status(200).json(
+        formatResponse(result.data, 'MDM devices retrieved successfully', {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+        }),
+      );
     } catch (error) {
       next(error);
     }
