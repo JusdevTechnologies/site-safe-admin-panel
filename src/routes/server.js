@@ -194,11 +194,27 @@ router.post(
 );
 
 /**
+ * GET /server/profile
+ * Purpose: Apple ADE (NanoDEP) compatible profile download endpoint.
+ *          Apple always calls GET /profile during Automated Device Enrollment.
+ *          No authentication required — Apple cannot send custom headers.
+ *          Serial number extracted from query params or headers as forwarded by NanoDEP.
+ * Expected Response: Binary .mobileconfig with Content-Type: application/x-apple-aspen-config
+ * Auth: None
+ * Caller: Apple ADE / NanoDEP
+ * Lifecycle: profile_generated → profile_delivered
+ */
+router.get(
+  '/profile',
+  ADEEnrollmentProfileController.appleProfile.bind(ADEEnrollmentProfileController),
+);
+
+/**
  * GET /server/profile/:uuid
  * Purpose: Get an enrollment profile by UUID.
  * Auth: ADE API Key
  * Caller: NanoDEP
- * Lifecycle: N/A
+ * Lifecycle: N/A (read-only)
  */
 router.get(
   '/profile/:uuid',
