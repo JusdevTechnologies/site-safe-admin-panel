@@ -9,8 +9,10 @@ class ProfileSigner {
     this._enabled = environment.ade.signingEnabled || false;
     this._certPath = environment.ade.signingCertPath || '';
     this._keyPath = environment.ade.signingKeyPath || '';
+    this._caCertPath = environment.ade.rootCaCertPath || '';
     this._signingCert = null;
     this._signingKey = null;
+    this._caCert = null;
   }
 
   setEnabled(enabled) {
@@ -43,27 +45,12 @@ class ProfileSigner {
       logger.info(
         `[ProfileSigner] Signing cert issuer: "${this._signingCert.issuer.getField('CN')?.value || 'Unknown'}"`,
       );
-      logger.info(
-        `[ProfileSigner] Signing cert valid from: ${this._signingCert.validity.notBefore?.toISOString() || 'Unknown'}`,
-      );
-      logger.info(
-        `[ProfileSigner] Signing cert valid until: ${this._signingCert.validity.notAfter?.toISOString() || 'Unknown'}`,
-      );
 
       const signStart = Date.now();
-      const p7 = forge.pkcs7.createSignedData();
-      p7.content = forge.util.createBuffer(xmlContent, 'utf8');
-      p7.addCertificate(this._signingCert);
-      p7.addSigner({
-        key: this._signingKey,
-        certificate: this._signingCert,
-        digestAlgorithm: forge.pki.oids.sha256,
-      });
-      p7.sign({ detached: false });
+      const derBytes = this._signWithOpenssl(xmlContent);
       const signTime = Date.now() - signStart;
-      logger.info(`[ProfileSigner] CMS sign operation took ${signTime}ms`);
+      logger.info(`[ProfileSigner] Openssl sign operation took ${signTime}ms`);
 
-      const derBytes = forge.asn1.toDer(p7.toAsn1()).getBytes();
       const signature = forge.util.encode64(derBytes);
       logger.info(
         `[ProfileSigner] CMS signature size: ${signature.length} chars (${derBytes.length} bytes DER)`,
@@ -106,6 +93,39 @@ class ProfileSigner {
     return lines.join('\n');
   }
 
+  _signWithOpenssl(xmlContent) {
+    const { execSync } = require('child_process');
+    const tmpDir = require('os').tmpdir();
+    const uuid = require('uuid').v4();
+    const inputPath = path.join(tmpDir, `profile-${uuid}.plist`);
+    const outputPath = path.join(tmpDir, `profile-${uuid}.der`);
+
+    try {
+      fs.writeFileSync(inputPath, xmlContent, 'utf8');
+
+      const certPath = path.resolve(this._certPath);
+      const keyPath = path.resolve(this._keyPath);
+
+      let cmd =
+        `openssl smime -sign -signer "${certPath}" -inkey "${keyPath}" ` +
+        `-outform der -nodetach -in "${inputPath}" -out "${outputPath}"`;
+
+      if (this._caCertPath) {
+        const caPath = path.resolve(this._caCertPath);
+        if (fs.existsSync(caPath)) {
+          cmd += ` -certfile "${caPath}"`;
+        }
+      }
+
+      execSync(cmd, { stdio: 'pipe', timeout: 30000 });
+      const derBytes = fs.readFileSync(outputPath);
+      return derBytes;
+    } finally {
+      try { fs.unlinkSync(inputPath); } catch (_) {}
+      try { fs.unlinkSync(outputPath); } catch (_) {}
+    }
+  }
+
   _loadSigningCredentials() {
     const certPath = path.resolve(this._certPath);
     const keyPath = path.resolve(this._keyPath);
@@ -131,9 +151,6 @@ class ProfileSigner {
       const cn = this._signingCert.subject.getField('CN')?.value || 'Unknown';
       const issuer = this._signingCert.issuer.getField('CN')?.value || 'Unknown';
       logger.info(`[ProfileSigner] Loaded signing certificate: CN="${cn}", issuer="${issuer}"`);
-      logger.info(
-        `[ProfileSigner] Cert validity: ${this._signingCert.validity.notBefore?.toISOString() || '?'} → ${this._signingCert.validity.notAfter?.toISOString() || '?'}`,
-      );
     } catch (err) {
       throw new Error(`Failed to parse signing certificate: ${err.message}`);
     }
@@ -144,6 +161,19 @@ class ProfileSigner {
     } catch (err) {
       this._signingCert = null;
       throw new Error(`Failed to parse signing private key: ${err.message}`);
+    }
+
+    if (this._caCertPath) {
+      const caPath = path.resolve(this._caCertPath);
+      if (fs.existsSync(caPath)) {
+        const caPem = fs.readFileSync(caPath, 'utf8');
+        try {
+          this._caCert = forge.pki.certificateFromPem(caPem);
+          logger.info(`[ProfileSigner] Loaded CA cert for chain: CN="${this._caCert.subject.getField('CN')?.value || 'Unknown'}"`);
+        } catch (_) {
+          logger.warn('[ProfileSigner] Could not parse CA cert, chain will not be embedded');
+        }
+      }
     }
   }
 }
