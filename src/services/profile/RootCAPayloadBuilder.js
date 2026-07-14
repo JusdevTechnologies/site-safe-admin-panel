@@ -15,8 +15,9 @@ class RootCAPayloadBuilder {
       PayloadContent: certificate.rawData,
     };
 
-    logger.debug(
-      `[RootCAPayloadBuilder] Built root CA payload ${payloadUuid} for "${certificate.displayName}"`,
+    logger.info(
+      `[RootCAPayloadBuilder] Built root CA payload ${payloadUuid} for "${certificate.displayName}"` +
+        ` (rawData: ${certificate.rawData ? certificate.rawData.length + ' bytes' : 'empty'})`,
     );
 
     return payload;

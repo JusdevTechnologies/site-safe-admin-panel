@@ -16,29 +16,49 @@ class CertificateLoader {
   async loadRootCACertificates() {
     const certPath = this._certPaths.rootCa;
     if (!certPath) {
-      logger.debug('[CertLoader] No root CA cert path configured');
+      logger.warn('[CertLoader] No root CA cert path configured — device may not trust MDM server');
       return [];
     }
+
+    logger.info(`[CertLoader] Loading root CA certificates from: ${certPath}`);
 
     try {
       const resolvedPath = path.resolve(certPath);
       const stats = fs.statSync(resolvedPath);
+      logger.info(
+        `[CertLoader] Path resolved: ${resolvedPath} (${stats.isDirectory() ? 'directory' : 'file'})`,
+      );
 
       let certs;
       if (stats.isDirectory()) {
         certs = this._loadCertDirectory(resolvedPath);
+        logger.info(`[CertLoader] Found ${certs.length} cert file(s) in directory`);
       } else {
         const cert = this._loadCertFile(resolvedPath);
         certs = cert ? [cert] : [];
+        logger.info(`[CertLoader] Loaded ${certs.length} cert(s) from file`);
       }
 
+      logger.info(`[CertLoader] Validating ${certs.length} root CA certificate(s)...`);
       const validated = certs.filter((c) => this._validateRootCACert(c));
+      logger.info(`[CertLoader] ${validated.length}/${certs.length} passed validation`);
+
       const ordered = this._orderCertChain(validated);
+      logger.info(`[CertLoader] Certificate chain ordered: ${ordered.length} cert(s)`);
+
+      ordered.forEach((c, i) => {
+        logger.info(`[CertLoader]   Cert[${i}]: "${c.displayName}" (${c.rawData.length} bytes)`);
+      });
 
       logger.info(`[CertLoader] Loaded ${ordered.length} root CA certificate(s) from ${certPath}`);
       return ordered;
     } catch (err) {
-      logger.warn(`[CertLoader] Failed to load root CA certificates from ${certPath}: ${err.message}`);
+      logger.warn(
+        `[CertLoader] Failed to load root CA certificates from ${certPath}: ${err.message}`,
+      );
+      logger.warn(
+        '[CertLoader] Without root CA certs, the device may not trust the MDM server TLS connection',
+      );
       return [];
     }
   }
@@ -46,21 +66,40 @@ class CertificateLoader {
   async loadIdentityCertificate() {
     const certPath = this._certPaths.identity;
     if (!certPath) {
-      logger.debug('[CertLoader] No identity cert path configured');
+      logger.warn(
+        '[CertLoader] No identity cert path configured — MDM identity payload will be omitted',
+      );
+      logger.warn(
+        '[CertLoader] Device MDM authentication will likely fail without identity certificate',
+      );
       return null;
     }
 
+    logger.info(`[CertLoader] Loading identity certificate from: ${certPath}`);
+
     try {
       const resolvedPath = path.resolve(certPath);
+      logger.info(`[CertLoader] Path resolved: ${resolvedPath}`);
       const data = fs.readFileSync(resolvedPath);
+      logger.info(`[CertLoader] Read ${data.length} bytes from identity cert file`);
 
+      logger.info('[CertLoader] Validating PKCS#12 bundle...');
       const validation = this._validatePKCS12(data, this._identityPassword);
       if (!validation.valid) {
-        logger.warn(`[CertLoader] Identity certificate validation failed: ${validation.error}`);
+        logger.error(`[CertLoader] Identity certificate VALIDATION FAILED: ${validation.error}`);
         return null;
       }
 
       logger.info('[CertLoader] Identity certificate loaded and validated successfully');
+      logger.info(`[CertLoader]   Common Name (CN): ${validation.commonName}`);
+      logger.info(
+        `[CertLoader]   Expires: ${validation.expirationDate ? validation.expirationDate.toISOString() : 'Unknown'}`,
+      );
+      logger.info(
+        `[CertLoader]   Days remaining: ${validation.expirationDate ? Math.floor((validation.expirationDate - new Date()) / (1000 * 60 * 60 * 24)) : 'Unknown'}`,
+      );
+      logger.info(`[CertLoader]   Data size: ${data.length} bytes`);
+
       return {
         displayName: 'MDM Identity Certificate',
         description: 'Identity certificate for MDM enrollment',
@@ -69,7 +108,9 @@ class CertificateLoader {
         commonName: validation.commonName,
       };
     } catch (err) {
-      logger.warn(`[CertLoader] Failed to load identity certificate from ${certPath}: ${err.message}`);
+      logger.error(
+        `[CertLoader] Failed to load identity certificate from ${certPath}: ${err.message}`,
+      );
       return null;
     }
   }
@@ -87,8 +128,7 @@ class CertificateLoader {
       const hasKey =
         (keyBags[forge.pki.oids.pkcs8ShroudedKeyBag] &&
           keyBags[forge.pki.oids.pkcs8ShroudedKeyBag].length > 0) ||
-        (keyBagsPlain[forge.pki.oids.keyBag] &&
-          keyBagsPlain[forge.pki.oids.keyBag].length > 0);
+        (keyBagsPlain[forge.pki.oids.keyBag] && keyBagsPlain[forge.pki.oids.keyBag].length > 0);
 
       if (!hasKey) {
         return { valid: false, error: 'No private key found in PKCS#12 bundle' };
@@ -131,8 +171,15 @@ class CertificateLoader {
       };
     } catch (err) {
       const message = err.message.toLowerCase();
-      if (message.includes('password') || message.includes('invalid password') || message.includes('pkcs12')) {
-        return { valid: false, error: `Invalid identity certificate password or corrupted PKCS#12 file: ${err.message}` };
+      if (
+        message.includes('password') ||
+        message.includes('invalid password') ||
+        message.includes('pkcs12')
+      ) {
+        return {
+          valid: false,
+          error: `Invalid identity certificate password or corrupted PKCS#12 file: ${err.message}`,
+        };
       }
       return { valid: false, error: `PKCS#12 parsing failed: ${err.message}` };
     }

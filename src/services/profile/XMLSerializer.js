@@ -2,9 +2,22 @@ const logger = require('../../utils/logger');
 
 class XMLSerializer {
   serialize(profileDict) {
+    const buildStart = Date.now();
     const xml = this._buildPlistXml(profileDict);
+    const buildTime = Date.now() - buildStart;
+    logger.info(`[XMLSerializer] XML built in ${buildTime}ms (${xml.length} bytes raw)`);
+
+    const validateStart = Date.now();
     this._validate(xml);
-    logger.debug(`[XMLSerializer] Generated XML (${xml.length} bytes)`);
+    logger.info(`[XMLSerializer] XML validation passed (${Date.now() - validateStart}ms)`);
+
+    const dictCount = (xml.match(/<dict>/g) || []).length;
+    const arrayCount = (xml.match(/<array>/g) || []).length;
+    const keyCount = (xml.match(/<key>/g) || []).length;
+    logger.info(
+      `[XMLSerializer] XML stats: ${dictCount} dict(s), ${arrayCount} array(s), ${keyCount} key(s)`,
+    );
+
     return xml;
   }
 

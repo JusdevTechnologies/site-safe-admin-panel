@@ -107,37 +107,39 @@ class ADEEnrollmentProfileController {
 
   async appleProfile(req, res, next) {
     const startTime = Date.now();
-    logger.info('[AppleADE] Incoming GET /profile');
+    logger.info('========================================================');
+    logger.info('[AppleADE] === APPLE ADE /profile REQUEST ===');
+    logger.info(`[AppleADE] Method: ${req.method} ${req.originalUrl}`);
+    logger.info(`[AppleADE] IP: ${req.ip}`);
+
+    const logHeaders = { ...req.headers };
+    const sensitiveHeaders = [
+      'authorization',
+      'cookie',
+      'set-cookie',
+      'x-ade-api-key',
+      'x-api-key',
+    ];
+    sensitiveHeaders.forEach((h) => delete logHeaders[h]);
+    logger.info(`[AppleADE] Query params: ${JSON.stringify(req.query)}`);
+    logger.info(`[AppleADE] Headers: ${JSON.stringify(logHeaders, null, 2)}`);
 
     try {
+      let serialSource = 'none';
       const serialNumber =
-        req.query.serialNumber ||
-        req.query.serial ||
-        req.query.SERIAL ||
-        req.query.SerialNumber ||
-        req.query.device_serial ||
-        req.headers['x-serial-number'] ||
-        req.headers['x-device-serial'] ||
-        req.headers['serial-number'];
+        ((serialSource = 'query.serialNumber'), req.query.serialNumber) ||
+        ((serialSource = 'query.serial'), req.query.serial) ||
+        ((serialSource = 'query.SERIAL'), req.query.SERIAL) ||
+        ((serialSource = 'query.SerialNumber'), req.query.SerialNumber) ||
+        ((serialSource = 'query.device_serial'), req.query.device_serial) ||
+        ((serialSource = 'header.x-serial-number'), req.headers['x-serial-number']) ||
+        ((serialSource = 'header.x-device-serial'), req.headers['x-device-serial']) ||
+        ((serialSource = 'header.serial-number'), req.headers['serial-number']);
 
       if (!serialNumber) {
-        const sanitizedHeaders = { ...req.headers };
-        const sensitiveHeaders = [
-          'authorization',
-          'cookie',
-          'set-cookie',
-          'x-ade-api-key',
-          'x-api-key',
-        ];
-        sensitiveHeaders.forEach((h) => delete sanitizedHeaders[h]);
-
-        logger.warn('[AppleADE] No serial number found in request', {
-          query: req.query,
-          headers: sanitizedHeaders,
-          method: req.method,
-          path: req.path,
-          originalUrl: req.originalUrl,
-        });
+        logger.warn('[AppleADE] === NO SERIAL NUMBER FOUND ===');
+        logger.warn('[AppleADE] All query params:', JSON.stringify(req.query));
+        logger.warn('[AppleADE] All headers (sanitized):', JSON.stringify(logHeaders));
 
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
@@ -145,19 +147,39 @@ class ADEEnrollmentProfileController {
         });
       }
 
-      logger.info(`[AppleADE] Detected serial number: ${serialNumber}`);
+      logger.info('[AppleADE] === SERIAL NUMBER EXTRACTED ===');
+      logger.info(`[AppleADE] Source: ${serialSource}`);
+      logger.info(`[AppleADE] Value: ${serialNumber}`);
 
       const result = await ADEEnrollmentProfileService.generateProfileForDevice(serialNumber);
 
       const elapsed = Date.now() - startTime;
-      logger.info(`[AppleADE] Profile generated successfully in ${elapsed}ms`);
+      const profileSize = result.mobileconfig ? result.mobileconfig.length : 0;
+      logger.info('[AppleADE] === PROFILE GENERATED SUCCESSFULLY ===');
+      logger.info(`[AppleADE] MIME type: ${result.mimeType}`);
+      logger.info(`[AppleADE] Profile size: ${profileSize} bytes`);
+      logger.info(`[AppleADE] Generation time: ${elapsed}ms`);
+      logger.info(
+        `[AppleADE] Profile UUID: ${result.profile ? result.profile.profileUuid : 'N/A'}`,
+      );
 
       res.set('Content-Type', result.mimeType);
       res.set('Content-Disposition', 'attachment; filename="enrollment.mobileconfig"');
+      logger.info('[AppleADE] Response headers set');
+      logger.info(`[AppleADE] Content-Type: ${result.mimeType}`);
+      logger.info('[AppleADE] Content-Disposition: attachment; filename="enrollment.mobileconfig"');
+      logger.info(`[AppleADE] Sending ${profileSize} bytes to device`);
+      logger.info(`[AppleADE] === END /profile REQUEST (${elapsed}ms) ===`);
+      logger.info('========================================================');
       res.send(result.mobileconfig);
     } catch (error) {
       const elapsed = Date.now() - startTime;
-      logger.error(`[AppleADE] Profile generation failed after ${elapsed}ms: ${error.message}`);
+      logger.error('[AppleADE] === PROFILE GENERATION FAILED ===');
+      logger.error(`[AppleADE] Error: ${error.message}`);
+      logger.error(`[AppleADE] Stack: ${error.stack}`);
+      logger.error(`[AppleADE] Failure time: ${elapsed}ms`);
+      logger.error(`[AppleADE] === END /profile REQUEST (${elapsed}ms) ===`);
+      logger.info('========================================================');
       next(error);
     }
   }

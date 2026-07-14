@@ -49,9 +49,21 @@ class MDMPayloadBuilder {
       payload.AnchorCertificates = anchorCerts.map((cert) => cert.rawData);
     }
 
-    logger.debug(
-      `[MDMPayloadBuilder] Built MDM payload ${payloadUuid} for topic "${topic}"`,
+    logger.info('[MDMPayloadBuilder] Built MDM payload');
+    logger.info(`[MDMPayloadBuilder]   PayloadUUID: ${payloadUuid}`);
+    logger.info(`[MDMPayloadBuilder]   ServerURL: ${serverUrl}`);
+    logger.info(`[MDMPayloadBuilder]   CheckInURL: ${checkinUrl}`);
+    logger.info(`[MDMPayloadBuilder]   Topic: ${topic}`);
+    logger.info('[MDMPayloadBuilder]   SignMessage: true');
+    logger.info(`[MDMPayloadBuilder]   IsSupervised: ${isSupervised}`);
+    logger.info(`[MDMPayloadBuilder]   IsMandatory: ${isMandatory}`);
+    logger.info(`[MDMPayloadBuilder]   IsMDMRemovable: ${isMDMRemovable}`);
+    logger.info(`[MDMPayloadBuilder]   AwaitDeviceConfigured: ${awaitDeviceConfigured}`);
+    logger.info(`[MDMPayloadBuilder]   AccessRights: ${accessRights}`);
+    logger.info(
+      `[MDMPayloadBuilder]   IdentityCertificateUUID: ${identityPayloadUuid || 'NOT SET'}`,
     );
+    logger.info(`[MDMPayloadBuilder]   AnchorCertificates: ${anchorCerts.length} cert(s)`);
 
     return payload;
   }

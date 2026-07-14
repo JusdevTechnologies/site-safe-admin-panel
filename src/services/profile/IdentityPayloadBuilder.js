@@ -15,7 +15,15 @@ class IdentityPayloadBuilder {
       PayloadContent: certificate.rawData,
     };
 
-    logger.info(`[IdentityPayloadBuilder] Built identity payload with UUID ${payloadUuid}`);
+    logger.info('[IdentityPayloadBuilder] Built identity payload');
+    logger.info(`[IdentityPayloadBuilder]   PayloadUUID: ${payloadUuid}`);
+    logger.info(`[IdentityPayloadBuilder]   PayloadIdentifier: ${payload.PayloadIdentifier}`);
+    logger.info(
+      `[IdentityPayloadBuilder]   PayloadContent: ${certificate.rawData ? certificate.rawData.length + ' bytes (PKCS#12)' : 'empty'}`,
+    );
+    logger.info(
+      `[IdentityPayloadBuilder]   Certificate CN: ${certificate.commonName || 'Unknown'}`,
+    );
 
     return {
       payloadUuid,

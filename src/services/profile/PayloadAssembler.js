@@ -1,3 +1,5 @@
+const logger = require('../../utils/logger');
+
 class PayloadAssembler {
   assemble({ profile, rootCaPayloads = [], identityPayload = null, mdmPayload }) {
     const payloadContent = [];
@@ -54,6 +56,33 @@ class PayloadAssembler {
     if (profile.skipSetupItems && profile.skipSetupItems.length > 0) {
       assembled.SkipSetupItems = profile.skipSetupItems;
     }
+
+    logger.info(`[PayloadAssembler] Assembled profile with ${payloadContent.length} payload(s)`);
+    logger.info(`[PayloadAssembler]   PayloadUUID: ${assembled.PayloadUUID}`);
+    logger.info(`[PayloadAssembler]   PayloadIdentifier: ${assembled.PayloadIdentifier}`);
+    logger.info(`[PayloadAssembler]   PayloadDisplayName: ${assembled.PayloadDisplayName}`);
+    logger.info(`[PayloadAssembler]   PayloadOrganization: ${assembled.PayloadOrganization}`);
+    logger.info(`[PayloadAssembler]   PayloadType: ${assembled.PayloadType}`);
+    logger.info(`[PayloadAssembler]   PayloadVersion: ${assembled.PayloadVersion}`);
+    logger.info(
+      `[PayloadAssembler]   PayloadRemovalDisallowed: ${assembled.PayloadRemovalDisallowed}`,
+    );
+    if (assembled.OrganizationDisplayName)
+      logger.info(
+        `[PayloadAssembler]   OrganizationDisplayName: ${assembled.OrganizationDisplayName}`,
+      );
+    if (assembled.SupportEmailAddress)
+      logger.info(`[PayloadAssembler]   SupportEmailAddress: ${assembled.SupportEmailAddress}`);
+    if (assembled.SupportPhoneNumber)
+      logger.info(`[PayloadAssembler]   SupportPhoneNumber: ${assembled.SupportPhoneNumber}`);
+    if (assembled.Department)
+      logger.info(`[PayloadAssembler]   Department: ${assembled.Department}`);
+    if (assembled.Language) logger.info(`[PayloadAssembler]   Language: ${assembled.Language}`);
+    if (assembled.Region) logger.info(`[PayloadAssembler]   Region: ${assembled.Region}`);
+    if (assembled.SkipSetupItems)
+      logger.info(
+        `[PayloadAssembler]   SkipSetupItems: ${JSON.stringify(assembled.SkipSetupItems)}`,
+      );
 
     return assembled;
   }

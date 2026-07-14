@@ -252,22 +252,50 @@ class ADEEnrollmentProfileService {
   }
 
   async generateProfileForDevice(serialNumber) {
-    logger.info(`[ADEProfile] Generating enrollment profile for device: ${serialNumber}`);
+    logger.info('[ADEProfile] === GENERATE PROFILE FOR DEVICE ===');
+    logger.info(`[ADEProfile] Serial number: ${serialNumber}`);
 
     const profile = await this.getProfileForDevice(serialNumber);
+
+    logger.info(`[ADEProfile] Resolved profile: ${profile.profileUuid}`);
+    logger.info(`[ADEProfile] Profile display name: ${profile.displayName}`);
+    logger.info(`[ADEProfile] Organization: ${profile.organization}`);
+    logger.info(`[ADEProfile] Server URL: ${profile.url}`);
+    logger.info(`[ADEProfile] Check-in URL: ${profile.checkinUrl}`);
+    logger.info(`[ADEProfile] Topic: ${profile.topic}`);
+    logger.info(`[ADEProfile] Version: ${profile.version}`);
+    logger.info(`[ADEProfile] Supervised: ${profile.supervised}`);
+    logger.info(`[ADEProfile] Mandatory: ${profile.isMandatory}`);
+    logger.info(`[ADEProfile] Allow removal: ${profile.allowProfileRemoval}`);
+    logger.info(`[ADEProfile] Await device configured: ${profile.awaitDeviceConfigured}`);
+    logger.info(`[ADEProfile] Identity cert UUID: ${profile.identityCertificateUuid}`);
+    logger.info(
+      `[ADEProfile] Skip setup items: ${JSON.stringify(profile.skipSetupAssistantItems)}`,
+    );
+    logger.info(
+      `[ADEProfile] Anchor certs: ${profile.anchorCertificates ? profile.anchorCertificates.length + ' configured' : 'none'}`,
+    );
 
     const enrollment = await db.AdeEnrollment.findOne({
       where: { serial_number: serialNumber },
     });
 
     if (enrollment) {
+      logger.info(
+        `[ADEProfile] Enrollment found: ID=${enrollment.id}, status=${enrollment.status}, profile_uuid=${enrollment.profile_uuid}`,
+      );
       await enrollment.update({
         profile_uuid: profile.profileUuid,
         profile_generated_at: new Date(),
       });
+      logger.info(`[ADEProfile] Enrollment updated with profile_uuid=${profile.profileUuid}`);
+    } else {
+      logger.warn(`[ADEProfile] No enrollment record found for serial: ${serialNumber}`);
     }
 
+    const genStart = Date.now();
     const mobileconfig = await ADEProfileGenerator.generateMobileconfig(profile, enrollment);
+    const genTime = Date.now() - genStart;
 
     await this._recordAudit(
       'ade_profile_generated',
@@ -279,9 +307,11 @@ class ADEEnrollmentProfileService {
       'success',
     );
 
-    logger.info(
-      `[ADEProfile] Generated .mobileconfig for ${serialNumber} using profile ${profile.profileUuid}`,
-    );
+    logger.info('[ADEProfile] .mobileconfig generated successfully');
+    logger.info(`[ADEProfile] Generator took ${genTime}ms`);
+    logger.info(`[ADEProfile] Profile UUID: ${profile.profileUuid}`);
+    logger.info(`[ADEProfile] MIME type: ${ADEProfileGenerator.getMimeType()}`);
+    logger.info('[ADEProfile] === END GENERATE PROFILE FOR DEVICE ===');
 
     return {
       profile,
