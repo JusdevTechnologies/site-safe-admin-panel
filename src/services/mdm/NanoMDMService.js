@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
 const environment = require('../../../config/environment');
 const logger = require('../../utils/logger');
 const ExternalServiceError = require('../../exceptions/ExternalServiceError');
@@ -274,16 +275,33 @@ class NanoMDMService {
       throw new ExternalServiceError('Command payload is required');
     }
 
+    const { baseUrl, apiKey, authType, bearerToken, timeout } = environment.nanomdm;
+    if (!baseUrl) {
+      throw new ExternalServiceError('NanoMDM is not configured');
+    }
+
+    const authHeader = authType === 'api_key' && apiKey
+      ? `Basic ${Buffer.from(`nanomdm:${apiKey}`).toString('base64')}`
+      : authType === 'bearer_token' && bearerToken
+        ? `Bearer ${bearerToken}`
+        : '';
+
+    const headers = { 'Content-Type': 'application/x-apple-aspen-mdm-command' };
+    if (authHeader) headers['Authorization'] = authHeader;
+
+    const cleanBase = baseUrl.replace(/\/+$/, '');
+
     logger.info(
       `[MDM:NanoMDM] Queueing command | enrollment=${enrollmentId} | payloadSize=${payload.length}`,
     );
-    const client = this._getClient();
     try {
-      const response = await client.request({
+      const response = await axios({
         method: 'PUT',
+        baseURL: cleanBase,
         url: `/v1/enqueue/${encodeURIComponent(enrollmentId)}`,
-        headers: { 'Content-Type': 'application/x-apple-aspen-mdm-command' },
+        headers,
         data: payload,
+        timeout,
       });
       return response.data;
     } catch (error) {
