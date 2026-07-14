@@ -19,6 +19,7 @@ const employeeRoutes = require('./routes/employees');
 const mobileRoutes = require('./routes/mobile');
 const serverRoutes = require('./routes/server');
 const mdmRoutes = require('./routes/mdm');
+const enrollRoutes = require('./routes/enroll');
 const ADEEnrollmentProfileController = require('./controllers/ADEEnrollmentProfileController');
 
 const logger = require('./utils/logger');
@@ -81,6 +82,9 @@ app.use('/server', serverRoutes);
 
 // MDM Management Routes — standalone NanoMDM management APIs
 app.use('/api/v1/mdm', mdmRoutes);
+
+// Manual Enrollment Route — serves Safari-downloadable .mobileconfig
+app.use('/enroll', enrollRoutes);
 
 // Apple ADE / NanoDEP root-level endpoints — required by Apple
 // Apple always performs GET /profile (not /server/profile) during enrollment

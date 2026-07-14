@@ -26,8 +26,11 @@ class PayloadAssembler {
       PayloadType: 'Configuration',
       PayloadUUID: profile.payloadUuid,
       PayloadVersion: profile.version,
-      TargetDeviceType: 5,
     };
+
+    if (profile.targetDeviceType !== undefined && profile.targetDeviceType !== null) {
+      assembled.TargetDeviceType = profile.targetDeviceType;
+    }
 
     if (profile.organizationDisplayName) {
       assembled.OrganizationDisplayName = profile.organizationDisplayName;

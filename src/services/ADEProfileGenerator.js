@@ -53,6 +53,7 @@ class ADEProfileGenerator {
       language: profile.language || environment.ade.language,
       region: profile.region || environment.ade.region,
       department: profile.department || environment.ade.department,
+      targetDeviceType: 5,
     };
 
     logger.info(`[ADEProfileGen] Profile identifier: ${identifier}`);
