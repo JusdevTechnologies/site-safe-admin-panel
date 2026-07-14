@@ -7,14 +7,14 @@ const {
   CertificateLoader,
   MDMPayloadBuilder,
   RootCAPayloadBuilder,
-  IdentityPayloadBuilder,
+  SCEPPayloadBuilder,
   PayloadAssembler,
   ProfileSigner,
   XMLSerializer,
 } = require('./profile');
 
 class ADEProfileGenerator {
-  async generateMobileconfig(profile, _enrollment) {
+  async generateMobileconfig(profile, enrollment) {
     const profileUuid = profile.profileUuid || uuidv4();
     logger.info('[ADEProfileGen] ========================================================');
     logger.info('[ADEProfileGen] === GENERATE MOBILECONFIG ===');
@@ -82,7 +82,6 @@ class ADEProfileGenerator {
 
     const certLoadStart = Date.now();
     const rootCaCerts = await CertificateLoader.loadRootCACertificates();
-    const identityCerts = await CertificateLoader.loadIdentityCertificate();
     logger.info(`[ADEProfileGen] Certificate loading took ${Date.now() - certLoadStart}ms`);
 
     logger.info(`[ADEProfileGen] Building ${rootCaCerts.length} root CA payload(s)`);
@@ -94,29 +93,19 @@ class ADEProfileGenerator {
       return payload;
     });
 
-    let identityPayload = null;
-    let identityPayloadUuid = null;
-
-    if (identityCerts) {
-      logger.info('[ADEProfileGen] Building identity payload...');
-      const buildStart = Date.now();
-      const result = IdentityPayloadBuilder.build(identityCerts, identifier);
-      identityPayload = result.payload;
-      identityPayloadUuid = result.payloadUuid;
-      logger.info(`[ADEProfileGen] Identity payload built in ${Date.now() - buildStart}ms`);
-      logger.info(`[ADEProfileGen] Identity payload UUID: ${identityPayloadUuid}`);
-      logger.info(`[ADEProfileGen] Identity cert CN: ${identityCerts.commonName || 'Unknown'}`);
-      logger.info(
-        `[ADEProfileGen] Identity cert expires: ${identityCerts.expirationDate ? identityCerts.expirationDate.toISOString() : 'Unknown'}`,
-      );
-    } else {
-      logger.warn(
-        '[ADEProfileGen] No identity certificate loaded — MDM payload will NOT include IdentityCertificateUUID',
-      );
-      logger.warn(
-        '[ADEProfileGen] The device may fail MDM authentication without an identity certificate',
-      );
-    }
+    logger.info('[ADEProfileGen] Building SCEP payload...');
+    const scepBuildStart = Date.now();
+    const {
+      payload: scepPayload,
+      payloadUuid: scepPayloadUuid,
+    } = SCEPPayloadBuilder.build({
+      identifier,
+      url: 'https://kokkenweb.com/scep',
+      challenge: enrollment?.challenge || '',
+      subject: enrollment?.serial_number || '',
+    });
+    logger.info(`[ADEProfileGen] SCEP payload built in ${Date.now() - scepBuildStart}ms`);
+    logger.info(`[ADEProfileGen] SCEP payload UUID: ${scepPayloadUuid}`);
 
     logger.info(`[ADEProfileGen] Building MDM payload for topic "${topic}"`);
     const mdmPayload = MDMPayloadBuilder.build({
@@ -128,7 +117,7 @@ class ADEProfileGenerator {
       isMandatory: profileData.isMandatory,
       isMDMRemovable: profileData.isMDMRemovable,
       awaitDeviceConfigured: profileData.awaitDeviceConfigured,
-      identityPayloadUuid,
+      identityPayloadUuid: scepPayloadUuid,
       anchorCerts: rootCaCerts,
     });
     logger.info(`[ADEProfileGen] MDM payload built: UUID=${mdmPayload.PayloadUUID}`);
@@ -143,12 +132,12 @@ class ADEProfileGenerator {
       `[ADEProfileGen] MDM AnchorCertificates: ${mdmPayload.AnchorCertificates ? mdmPayload.AnchorCertificates.length + ' cert(s)' : 'none'}`,
     );
 
-    const payloadCount = rootCaPayloads.length + (identityPayload ? 1 : 0) + 1;
+    const payloadCount = rootCaPayloads.length + 1 + 1;
     logger.info(`[ADEProfileGen] Assembling profile (${payloadCount} payloads)...`);
     const assembled = PayloadAssembler.assemble({
       profile: profileData,
       rootCaPayloads,
-      identityPayload,
+      scepPayload,
       mdmPayload,
     });
 
@@ -181,8 +170,7 @@ class ADEProfileGenerator {
 
     logger.info(
       `[ADEProfileGen] Generated .mobileconfig for ${profileUuid} — ` +
-        `${payloadCount} payload(s) (${rootCaPayloads.length} root CA, ` +
-        `${identityPayload ? 1 : 0} identity, 1 MDM), ` +
+        `${payloadCount} payload(s) (${rootCaPayloads.length} root CA, 1 SCEP, 1 MDM), ` +
         `signed: ${signed.signed}, ` +
         `size: ${signed.content.length} bytes`,
     );

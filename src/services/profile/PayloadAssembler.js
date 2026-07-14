@@ -1,7 +1,7 @@
 const logger = require('../../utils/logger');
 
 class PayloadAssembler {
-  assemble({ profile, rootCaPayloads = [], identityPayload = null, mdmPayload }) {
+  assemble({ profile, rootCaPayloads = [], scepPayload = null, mdmPayload }) {
     const payloadContent = [];
 
     if (rootCaPayloads.length > 0) {
@@ -10,8 +10,8 @@ class PayloadAssembler {
       }
     }
 
-    if (identityPayload) {
-      payloadContent.push(identityPayload);
+    if (scepPayload) {
+      payloadContent.push(scepPayload);
     }
 
     payloadContent.push(mdmPayload);
