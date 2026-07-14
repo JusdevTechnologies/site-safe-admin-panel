@@ -50,7 +50,8 @@ class NanoMDMService {
     const pool = this._getPgPool();
     if (!pool) return null;
 
-    const { rows } = await pool.query(`
+    const { rows } = await pool.query(
+      `
       SELECT
         d.id AS udid,
         d.serial_number,
@@ -64,7 +65,9 @@ class NanoMDMService {
       FROM devices d
       JOIN enrollments e ON e.device_id = d.id
       WHERE d.id = $1 AND e.enabled = true
-    `, [udid]);
+    `,
+      [udid],
+    );
     return rows[0] || null;
   }
 
@@ -231,7 +234,7 @@ class NanoMDMService {
     const dbDevices = await this._queryNanoMDMDevices();
     if (dbDevices) {
       logger.info(`[MDM:NanoMDM] Found ${dbDevices.length} device(s) via DB query`);
-      return dbDevices.map(d => ({
+      return dbDevices.map((d) => ({
         ...d,
         last_seen: d.last_seen ? d.last_seen.toISOString() : null,
       }));
@@ -271,13 +274,21 @@ class NanoMDMService {
       throw new ExternalServiceError('Command payload is required');
     }
 
-    logger.info(`[MDM:NanoMDM] Queueing command | enrollment=${enrollmentId} | payloadSize=${payload.length}`);
-    return this._request({
-      method: 'PUT',
-      url: `/v1/enqueue/${encodeURIComponent(enrollmentId)}`,
-      headers: { 'Content-Type': 'application/x-apple-aspen-mdm-command' },
-      data: payload,
-    });
+    logger.info(
+      `[MDM:NanoMDM] Queueing command | enrollment=${enrollmentId} | payloadSize=${payload.length}`,
+    );
+    const client = this._getClient();
+    try {
+      const response = await client.request({
+        method: 'PUT',
+        url: `/v1/enqueue/${encodeURIComponent(enrollmentId)}`,
+        headers: { 'Content-Type': 'application/x-apple-aspen-mdm-command' },
+        data: payload,
+      });
+      return response.data;
+    } catch (error) {
+      throw this._mapError(error);
+    }
   }
 
   async sendPush(enrollmentId) {
