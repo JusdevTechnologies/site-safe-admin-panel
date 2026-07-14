@@ -2,7 +2,7 @@ const ProfileValidator = require('./ProfileValidator');
 const CertificateLoader = require('./CertificateLoader');
 const MDMPayloadBuilder = require('./MDMPayloadBuilder');
 const RootCAPayloadBuilder = require('./RootCAPayloadBuilder');
-const SCEPPayloadBuilder = require('./SCEPPayloadBuilder');
+const IdentityPayloadBuilder = require('./IdentityPayloadBuilder');
 const PayloadAssembler = require('./PayloadAssembler');
 const ProfileSigner = require('./ProfileSigner');
 const XMLSerializer = require('./XMLSerializer');
@@ -12,7 +12,7 @@ module.exports = {
   CertificateLoader,
   MDMPayloadBuilder,
   RootCAPayloadBuilder,
-  SCEPPayloadBuilder,
+  IdentityPayloadBuilder,
   PayloadAssembler,
   ProfileSigner,
   XMLSerializer,
