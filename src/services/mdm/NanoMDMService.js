@@ -11,6 +11,61 @@ class NanoMDMService {
   constructor() {
     this._client = null;
     this._retryCount = 0;
+    this._pgPool = null;
+  }
+
+  _getPgPool() {
+    if (this._pgPool) return this._pgPool;
+    const { dbDsn } = environment.nanomdm;
+    if (!dbDsn) return null;
+    const { Pool } = require('pg');
+    this._pgPool = new Pool({ connectionString: dbDsn });
+    return this._pgPool;
+  }
+
+  async _queryNanoMDMDevices() {
+    const pool = this._getPgPool();
+    if (!pool) return null;
+
+    const { rows } = await pool.query(`
+      SELECT
+        d.id AS udid,
+        d.serial_number,
+        e.id AS enrollment_id,
+        e.push_magic,
+        e.token_hex AS push_token,
+        e.topic,
+        e.enabled,
+        e.type,
+        e.last_seen_at AS last_seen
+      FROM devices d
+      JOIN enrollments e ON e.device_id = d.id
+      WHERE e.enabled = true
+      ORDER BY e.last_seen_at DESC
+    `);
+    return rows;
+  }
+
+  async _queryNanoMDMDevice(udid) {
+    const pool = this._getPgPool();
+    if (!pool) return null;
+
+    const { rows } = await pool.query(`
+      SELECT
+        d.id AS udid,
+        d.serial_number,
+        e.id AS enrollment_id,
+        e.push_magic,
+        e.token_hex AS push_token,
+        e.topic,
+        e.enabled,
+        e.type,
+        e.last_seen_at AS last_seen
+      FROM devices d
+      JOIN enrollments e ON e.device_id = d.id
+      WHERE d.id = $1 AND e.enabled = true
+    `, [udid]);
+    return rows[0] || null;
   }
 
   _getClient() {
@@ -172,6 +227,16 @@ class NanoMDMService {
 
   async listDevices() {
     logger.info('[MDM:NanoMDM] Listing all devices');
+
+    const dbDevices = await this._queryNanoMDMDevices();
+    if (dbDevices) {
+      logger.info(`[MDM:NanoMDM] Found ${dbDevices.length} device(s) via DB query`);
+      return dbDevices.map(d => ({
+        ...d,
+        last_seen: d.last_seen ? d.last_seen.toISOString() : null,
+      }));
+    }
+
     return this._request({ method: 'GET', url: '/v1/devices' });
   }
 
@@ -180,6 +245,16 @@ class NanoMDMService {
       throw new ExternalServiceError('Device UDID is required');
     }
     logger.info(`[MDM:NanoMDM] Getting device ${udid}`);
+
+    const dbDevice = await this._queryNanoMDMDevice(udid);
+    if (dbDevice) {
+      logger.info(`[MDM:NanoMDM] Found device ${udid} via DB query`);
+      return {
+        ...dbDevice,
+        last_seen: dbDevice.last_seen ? dbDevice.last_seen.toISOString() : null,
+      };
+    }
+
     return this._request({
       method: 'GET',
       url: `/v1/devices/${encodeURIComponent(udid)}`,

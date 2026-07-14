@@ -65,6 +65,7 @@ module.exports = {
     apiKey: process.env.NANOMDM_API_KEY,
     bearerToken: process.env.NANOMDM_BEARER_TOKEN || '',
     timeout: parseInt(process.env.NANOMDM_TIMEOUT, 10) || 30000,
+    dbDsn: process.env.NANOMDM_DB_DSN || '',
   },
 
   accessManagement: {
