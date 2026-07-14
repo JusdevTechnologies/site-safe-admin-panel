@@ -53,8 +53,11 @@ class ADEProfileGenerator {
       language: profile.language || environment.ade.language,
       region: profile.region || environment.ade.region,
       department: profile.department || environment.ade.department,
-      targetDeviceType: 5,
     };
+
+    if (profileData.isSupervised) {
+      profileData.targetDeviceType = 5;
+    }
 
     logger.info(`[ADEProfileGen] Profile identifier: ${identifier}`);
     logger.info(`[ADEProfileGen] Server URL: ${serverUrl}`);
@@ -156,7 +159,9 @@ class ADEProfileGenerator {
     logger.info(`[ADEProfileGen] Top-level PayloadUUID: ${assembled.PayloadUUID}`);
     logger.info(`[ADEProfileGen] Top-level PayloadIdentifier: ${assembled.PayloadIdentifier}`);
     logger.info(`[ADEProfileGen] Top-level PayloadOrganization: ${assembled.PayloadOrganization}`);
-    logger.info(`[ADEProfileGen] TargetDeviceType: ${assembled.TargetDeviceType}`);
+    if (assembled.TargetDeviceType !== undefined) {
+      logger.info(`[ADEProfileGen] TargetDeviceType: ${assembled.TargetDeviceType}`);
+    }
     if (assembled.SkipSetupItems) {
       logger.info(`[ADEProfileGen] SkipSetupItems: ${JSON.stringify(assembled.SkipSetupItems)}`);
     }
