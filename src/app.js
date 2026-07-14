@@ -18,6 +18,7 @@ const deviceRoutes = require('./routes/devices');
 const employeeRoutes = require('./routes/employees');
 const mobileRoutes = require('./routes/mobile');
 const serverRoutes = require('./routes/server');
+const ADEEnrollmentProfileController = require('./controllers/ADEEnrollmentProfileController');
 
 const logger = require('./utils/logger');
 
@@ -76,6 +77,10 @@ app.use('/api/v1/mobile', mobileRoutes);
 
 // Server routes — Apple ADE / NanoDEP infrastructure endpoints
 app.use('/server', serverRoutes);
+
+// Apple ADE / NanoDEP root-level endpoints — required by Apple
+// Apple always performs GET /profile (not /server/profile) during enrollment
+app.get('/profile', ADEEnrollmentProfileController.appleProfile.bind(ADEEnrollmentProfileController));
 
 // ============================================
 // 404 HANDLER
