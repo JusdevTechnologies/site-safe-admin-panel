@@ -28,7 +28,7 @@ class NanoMDMService {
     };
 
     if (authType === 'api_key' && apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
+      headers['Authorization'] = `Basic ${Buffer.from(`nanomdm:${apiKey}`).toString('base64')}`;
     } else if (authType === 'bearer_token' && bearerToken) {
       headers['Authorization'] = `Bearer ${bearerToken}`;
     }
