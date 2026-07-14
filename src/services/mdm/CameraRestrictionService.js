@@ -11,6 +11,8 @@ class CameraRestrictionService {
     return {
       PayloadIdentifier: CAMERA_RESTRICTION_IDENTIFIER,
       PayloadType: 'Configuration',
+      PayloadVersion: 1,
+      PayloadUUID: require('uuid').v4(),
       PayloadDisplayName: 'Camera Restriction',
       PayloadOrganization: 'SiteSafe',
       PayloadDescription: 'Restricts camera access on managed iOS devices',
