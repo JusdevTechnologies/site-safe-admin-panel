@@ -37,6 +37,7 @@ class MdmDeviceController {
         enrollment_status: d.enrollment_status,
         push_token_status: d.push_token_status,
         camera_state: d.camera_state,
+        camera_status: d.camera_state === 'restricted' ? 'disabled' : d.camera_state === 'unrestricted' ? 'enabled' : 'unknown',
         last_seen: d.last_seen,
         last_sync_at: d.last_sync_at,
         created_at: d.created_at,
@@ -44,7 +45,7 @@ class MdmDeviceController {
       }));
 
       res.status(200).json(
-        formatResponse(devices, 'MDM devices retrieved successfully', {
+        formatResponse({ devices }, 'MDM devices retrieved successfully', {
           total: count,
           page: pageNum,
           limit: limitNum,
@@ -77,6 +78,7 @@ class MdmDeviceController {
           enrollment_status: device.enrollment_status,
           push_token_status: device.push_token_status,
           camera_state: device.camera_state,
+          camera_status: device.camera_state === 'restricted' ? 'disabled' : device.camera_state === 'unrestricted' ? 'enabled' : 'unknown',
           last_seen: device.last_seen,
           last_sync_at: device.last_sync_at,
           device_info: device.device_info,
