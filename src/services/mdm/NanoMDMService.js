@@ -265,15 +265,18 @@ class NanoMDMService {
     if (!enrollmentId) {
       throw new ExternalServiceError('Enrollment ID is required');
     }
-    if (!command || !command.command) {
-      throw new ExternalServiceError('Command with a "command" field is required');
+
+    const payload = command.command_payload || '';
+    if (!payload) {
+      throw new ExternalServiceError('Command payload is required');
     }
 
-    logger.info(`[MDM:NanoMDM] Queueing command | ${command.command} | enrollment=${enrollmentId}`);
+    logger.info(`[MDM:NanoMDM] Queueing command | enrollment=${enrollmentId} | payloadSize=${payload.length}`);
     return this._request({
       method: 'PUT',
       url: `/v1/enqueue/${encodeURIComponent(enrollmentId)}`,
-      data: command,
+      headers: { 'Content-Type': 'application/x-apple-aspen-mdm-command' },
+      data: payload,
     });
   }
 
