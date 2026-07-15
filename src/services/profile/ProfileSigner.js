@@ -63,7 +63,7 @@ class ProfileSigner {
       );
 
       logger.info('[ProfileSigner] CMS signing completed successfully');
-      return { signed: true, content: signedContent, signature };
+      return { signed: true, content: derBytes, signature };
     } catch (err) {
       logger.error(`[ProfileSigner] CMS SIGNING FAILED: ${err.message}`);
       logger.error(`[ProfileSigner] Stack: ${err.stack}`);
