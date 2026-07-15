@@ -138,6 +138,10 @@ module.exports = {
     identityCertPath: process.env.ADE_IDENTITY_CERT_PATH || '',
     identityCertPassword: process.env.ADE_IDENTITY_CERT_PASSWORD || '',
 
+    // Device identity messaging — controls Mdm-Signature header
+    // Set false when using -cert-header in NanoMDM (TLS client cert forwarding from proxy)
+    signMessage: process.env.ADE_SIGN_MESSAGE !== 'false',
+
     // CMS (PKCS#7) signing configuration
     signingEnabled: process.env.ADE_SIGNING_ENABLED === 'true',
     signingCertPath: process.env.ADE_SIGNING_CERT_PATH || '',

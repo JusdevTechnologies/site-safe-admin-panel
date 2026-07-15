@@ -46,6 +46,8 @@ class ADEProfileGenerator {
       awaitDeviceConfigured: profile.awaitDeviceConfigured !== false,
       identityCertificateUuid: profile.identityCertificateUuid || '',
       anchorCertificates: profile.anchorCertificates || [],
+      signMessage:
+        profile.signMessage !== undefined ? profile.signMessage : environment.ade.signMessage,
       skipSetupItems: skipItems,
       supportEmail: profile.supportEmail || environment.ade.supportEmail,
       supportPhone: profile.supportPhone || environment.ade.supportPhone,
@@ -134,6 +136,7 @@ class ADEProfileGenerator {
       awaitDeviceConfigured: profileData.awaitDeviceConfigured,
       identityPayloadUuid,
       anchorCerts: rootCaCerts,
+      signMessage: profileData.signMessage,
     });
     logger.info(`[ADEProfileGen] MDM payload built: UUID=${mdmPayload.PayloadUUID}`);
     logger.info(`[ADEProfileGen] MDM ServerURL: ${mdmPayload.ServerURL}`);

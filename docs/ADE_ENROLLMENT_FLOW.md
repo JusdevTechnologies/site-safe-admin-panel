@@ -428,3 +428,39 @@ pending → assigned → profile_generated → profile_delivered → enrollment_
 ## Configuration
 
 Key environment variables for the enrollment flow are documented in `.env.example`.
+
+---
+
+## NanoMDM: Using TLS Client Cert Instead of Mdm-Signature
+
+If the device is not sending the `Mdm-Signature` header (log: `empty Mdm-Signature header` / `missing MDM certificate`), you can use TLS client certificate forwarding.
+
+### 1. Enrollment Profile
+
+Set `ADE_SIGN_MESSAGE=false` in `.env` (or uncomment in `.env.example`) to tell the device _not_ to sign MDM messages.
+
+### 2. Apache mTLS + Header Forwarding
+
+Require client certs on the `/mdm` location and forward the PEM to NanoMDM via header:
+
+```apache
+SSLVerifyClient optional_no_ca
+SSLVerifyDepth 10
+
+<Location /mdm>
+    SSLVerifyClient require
+    SSLVerifyDepth 10
+    SSLOptions +StdEnvVars +ExportCertData
+    RequestHeader set X-Client-Cert "%{SSL_CLIENT_CERT}s"
+</Location>
+```
+
+### 3. NanoMDM Startup
+
+Run NanoMDM with the `-cert-header` flag to read the device cert from the forwarded header instead of extracting it from `Mdm-Signature`:
+
+```sh
+nanomdm -cert-header X-Client-Cert ...
+```
+
+This tells NanoMDM to call `cert-extract` on the `X-Client-Cert` header value (the DER-decoded client cert from the proxy) rather than on the `Mdm-Signature` HTTP header. The device's built-in DEP identity certificate presented during TLS handshake is used for authentication.

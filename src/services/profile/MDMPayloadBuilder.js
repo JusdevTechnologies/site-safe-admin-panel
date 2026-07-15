@@ -14,6 +14,7 @@ class MDMPayloadBuilder {
     identityPayloadUuid = null,
     anchorCerts = [],
     accessRights = 8191,
+    signMessage = true,
   }) {
     const payloadUuid = uuidv4();
 
@@ -27,7 +28,7 @@ class MDMPayloadBuilder {
       ServerURL: serverUrl,
       CheckInURL: checkinUrl,
       Topic: topic,
-      SignMessage: true,
+      SignMessage: signMessage,
       IsSupervised: isSupervised,
       IsMandatory: isMandatory,
       IsMDMRemovable: isMDMRemovable,
@@ -54,7 +55,7 @@ class MDMPayloadBuilder {
     logger.info(`[MDMPayloadBuilder]   ServerURL: ${serverUrl}`);
     logger.info(`[MDMPayloadBuilder]   CheckInURL: ${checkinUrl}`);
     logger.info(`[MDMPayloadBuilder]   Topic: ${topic}`);
-    logger.info('[MDMPayloadBuilder]   SignMessage: true');
+    logger.info(`[MDMPayloadBuilder]   SignMessage: ${signMessage}`);
     logger.info(`[MDMPayloadBuilder]   IsSupervised: ${isSupervised}`);
     logger.info(`[MDMPayloadBuilder]   IsMandatory: ${isMandatory}`);
     logger.info(`[MDMPayloadBuilder]   IsMDMRemovable: ${isMDMRemovable}`);
