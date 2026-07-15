@@ -20,6 +20,7 @@ const mobileRoutes = require('./routes/mobile');
 const serverRoutes = require('./routes/server');
 const mdmRoutes = require('./routes/mdm');
 const enrollRoutes = require('./routes/enroll');
+const mdmProxyRoutes = require('./routes/mdmProxy');
 const ADEEnrollmentProfileController = require('./controllers/ADEEnrollmentProfileController');
 
 const logger = require('./utils/logger');
@@ -33,6 +34,16 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
+
+// Raw body capture for MDM proxy (must be before body parsers)
+app.use('/mdm', (req, res, next) => {
+  const chunks = [];
+  req.on('data', (chunk) => chunks.push(chunk));
+  req.on('end', () => {
+    req.rawBody = Buffer.concat(chunks);
+    next();
+  });
+});
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
@@ -88,7 +99,14 @@ app.use('/enroll', enrollRoutes);
 
 // Apple ADE / NanoDEP root-level endpoints — required by Apple
 // Apple always performs GET /profile (not /server/profile) during enrollment
-app.get('/profile', ADEEnrollmentProfileController.appleProfile.bind(ADEEnrollmentProfileController));
+app.get(
+  '/profile',
+  ADEEnrollmentProfileController.appleProfile.bind(ADEEnrollmentProfileController),
+);
+
+// MDM Proxy — logs all request details and forwards to NanoMDM
+// Apache should route /mdm here instead of directly to NanoMDM
+app.use('/mdm', mdmProxyRoutes);
 
 // ============================================
 // 404 HANDLER
