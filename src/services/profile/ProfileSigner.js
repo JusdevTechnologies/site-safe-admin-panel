@@ -51,19 +51,19 @@ class ProfileSigner {
       const signTime = Date.now() - signStart;
       logger.info(`[ProfileSigner] Openssl sign operation took ${signTime}ms`);
 
-      const signature = forge.util.encode64(derBytes);
-      logger.info(
-        `[ProfileSigner] CMS signature size: ${signature.length} chars (${derBytes.length} bytes DER)`,
-      );
+      // const signature = forge.util.encode64(derBytes);
+      // logger.info(
+      //   `[ProfileSigner] CMS signature size: ${signature.length} chars (${derBytes.length} bytes DER)`,
+      // );
 
       const wrapStart = Date.now();
-      const signedContent = this._wrapSignedContent(signature);
-      logger.info(
-        `[ProfileSigner] Wrapped signed content: ${signedContent.length} bytes (${Date.now() - wrapStart}ms)`,
-      );
+      // const signedContent = this._wrapSignedContent(signature);
+      // logger.info(
+      //   `[ProfileSigner] Wrapped signed content: ${signedContent.length} bytes (${Date.now() - wrapStart}ms)`,
+      // );
 
       logger.info('[ProfileSigner] CMS signing completed successfully');
-      return { signed: true, content: derBytes, signature };
+      return { signed: true, content: derBytes, signature: null };
     } catch (err) {
       logger.error(`[ProfileSigner] CMS SIGNING FAILED: ${err.message}`);
       logger.error(`[ProfileSigner] Stack: ${err.stack}`);
@@ -121,8 +121,12 @@ class ProfileSigner {
       const derBytes = fs.readFileSync(outputPath);
       return derBytes;
     } finally {
-      try { fs.unlinkSync(inputPath); } catch (_) {}
-      try { fs.unlinkSync(outputPath); } catch (_) {}
+      try {
+        fs.unlinkSync(inputPath);
+      } catch (_) {}
+      try {
+        fs.unlinkSync(outputPath);
+      } catch (_) {}
     }
   }
 
@@ -169,7 +173,9 @@ class ProfileSigner {
         const caPem = fs.readFileSync(caPath, 'utf8');
         try {
           this._caCert = forge.pki.certificateFromPem(caPem);
-          logger.info(`[ProfileSigner] Loaded CA cert for chain: CN="${this._caCert.subject.getField('CN')?.value || 'Unknown'}"`);
+          logger.info(
+            `[ProfileSigner] Loaded CA cert for chain: CN="${this._caCert.subject.getField('CN')?.value || 'Unknown'}"`,
+          );
         } catch (_) {
           logger.warn('[ProfileSigner] Could not parse CA cert, chain will not be embedded');
         }
