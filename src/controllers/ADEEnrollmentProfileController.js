@@ -132,6 +132,8 @@ class ADEEnrollmentProfileController {
         ((serialSource = 'query.SERIAL'), req.query.SERIAL) ||
         ((serialSource = 'query.SerialNumber'), req.query.SerialNumber) ||
         ((serialSource = 'query.device_serial'), req.query.device_serial) ||
+        ((serialSource = 'header.x-ADM-device-serial-number'),
+        req.headers['x-adm-device-serial-number']) ||
         ((serialSource = 'header.x-serial-number'), req.headers['x-serial-number']) ||
         ((serialSource = 'header.x-device-serial'), req.headers['x-device-serial']) ||
         ((serialSource = 'header.serial-number'), req.headers['serial-number']);
