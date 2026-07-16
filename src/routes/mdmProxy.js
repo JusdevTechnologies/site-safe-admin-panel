@@ -225,6 +225,13 @@ router.all('*', async (req, res) => {
     logger.warn('[MDM Proxy]   Mdm-Signature: ABSENT (no PKCS#7 body to extract from)');
   }
 
+  // Route check-ins to /checkin on NanoMDM (due to -checkin flag)
+  if (rawBody.length > 0 && rawBody.includes('<key>MessageType</key>')) {
+    const newTarget = targetUrl.replace(/\/mdm$/i, '/checkin');
+    logger.info(`[MDM Proxy]   MessageType detected — routing to /checkin (was: ${targetUrl})`);
+    targetUrl = newTarget;
+  }
+
   Object.entries(logHeaders).forEach(([key, value]) => {
     logger.info(`[MDM Proxy]   Header ${key}: ${value}`);
   });
