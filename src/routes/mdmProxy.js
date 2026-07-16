@@ -1,8 +1,10 @@
 const express = require('express');
 const axios = require('axios');
 const forge = require('node-forge');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
 
@@ -163,20 +165,18 @@ function unwrapPkcs7(rawBody) {
     }
 
     // Extract certificates from SignedData (optional [0] IMPLICIT SET)
+    // Use walkAsn1 to find context-specific [0] tag (tagClass=2, type=0)
     const certs = [];
-    for (let i = 3; i < signedData.value.length; i++) {
-      const v = signedData.value[i];
-      if (v.tagClass === 2 && v.type === 0 && v.constructed && Array.isArray(v.value)) {
-        for (const certAsn1 of v.value) {
-          try {
-            const certDer = forge.asn1.toDer(certAsn1).getBytes();
-            const cert = forge.pki.certificateFromAsn1(
-              forge.asn1.fromDer(forge.util.createBuffer(certDer, 'binary')),
-            );
-            certs.push(cert);
-          } catch (_) {}
-        }
-        break;
+    const certsTag = walkAsn1(signedData, 2, 0, 0);
+    if (certsTag && Array.isArray(certsTag.value)) {
+      for (const certAsn1 of certsTag.value) {
+        try {
+          const certDer = forge.asn1.toDer(certAsn1).getBytes();
+          const cert = forge.pki.certificateFromAsn1(
+            forge.asn1.fromDer(forge.util.createBuffer(certDer, 'binary')),
+          );
+          certs.push(cert);
+        } catch (_) {}
       }
     }
 
@@ -225,6 +225,50 @@ function isPkcs7Body(rawBody) {
   return b === 0x30;
 }
 
+// Compute SHA256 hash of the mdm-identity cert DER for NanoMDM cert_auth cleanup
+function mdmSigningCertHash() {
+  if (!mdmSigningCert) return null;
+  try {
+    const asn1 = forge.pki.certificateToAsn1(mdmSigningCert);
+    const der = forge.asn1.toDer(asn1).getBytes();
+    return crypto.createHash('sha256').update(Buffer.from(der, 'binary')).digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+// Remove stale cert_auth entries from NanoMDM's DB so the same signing cert
+// can be re-used for a new enrollment attempt.
+async function cleanupNanoMDMCertAuth() {
+  const hash = mdmSigningCertHash();
+  if (!hash) {
+    logger.warn('[MDM Proxy] No cert hash for cleanup');
+    return;
+  }
+  const dbDsn = environment.nanomdm.dbDsn;
+  if (!dbDsn) {
+    logger.warn('[MDM Proxy] No NANOMDM_DB_DSN — skipping cert cleanup');
+    return;
+  }
+  let pool;
+  try {
+    pool = new Pool({ connectionString: dbDsn, max: 1, idleTimeoutMillis: 5000 });
+    // Try common cert_auth table name used by NanoMDM
+    for (const table of ['cert_auth', 'certificate_authentications']) {
+      const { rows } = await pool.query(`DELETE FROM ${table} WHERE cert_hash = $1`, [hash]);
+      if (rows && rows.length > 0) {
+        logger.info(
+          `[MDM Proxy] Cleaned ${rows.length} cert_auth row(s) from ${table} for hash ${hash.substring(0, 16)}...`,
+        );
+      }
+    }
+  } catch (e) {
+    logger.warn(`[MDM Proxy] Cert auth cleanup failed (non-fatal): ${e.message}`);
+  } finally {
+    if (pool) await pool.end().catch(() => {});
+  }
+}
+
 router.all('*', async (req, res) => {
   const startTime = Date.now();
   const rawBody = req.rawBody || Buffer.from('');
@@ -256,6 +300,9 @@ router.all('*', async (req, res) => {
       logger.info(
         `[MDM Proxy] Identity payload — UDID=${udid} Serial=${serial} certs=${certificates.length}`,
       );
+
+      // Clean up NanoMDM cert_auth so the mdm-identity cert can be re-used
+      await cleanupNanoMDMCertAuth();
 
       const authXml = buildAuthenticatePlist(udid, serial);
       const sig = rawSignPlist(authXml);
