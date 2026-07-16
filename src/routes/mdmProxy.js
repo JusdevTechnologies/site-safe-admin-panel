@@ -179,7 +179,7 @@ function reSignContent(bodyBytes) {
 
 router.all('*', async (req, res) => {
   const startTime = Date.now();
-  const targetUrl = `${environment.nanomdm.baseUrl.replace(/\/+$/, '')}${req.originalUrl}`;
+  let targetUrl = `${environment.nanomdm.baseUrl.replace(/\/+$/, '')}${req.originalUrl}`;
 
   const logHeaders = { ...req.headers };
   const redactedHeaders = ['authorization', 'cookie', 'set-cookie'];
@@ -225,10 +225,20 @@ router.all('*', async (req, res) => {
     logger.warn('[MDM Proxy]   Mdm-Signature: ABSENT (no PKCS#7 body to extract from)');
   }
 
-  // Route check-ins to /checkin on NanoMDM (due to -checkin flag)
-  if (rawBody.length > 0 && rawBody.includes('<key>MessageType</key>')) {
+  // Determine message type and route accordingly (NanoMDM -checkin flag splits endpoints)
+  let mdmMessageType = null;
+  const bodyStr = rawBody.toString('utf8');
+  const mtMatch = bodyStr.match(/<key>\s*MessageType\s*<\/key>\s*<string>\s*([^<]+)\s*<\/string>/i);
+  if (mtMatch) {
+    mdmMessageType = mtMatch[1];
+  }
+  const hasStatus = /<key>\s*Status\s*<\/key>/i.test(bodyStr);
+  logger.info(`[MDM Proxy]   Body parse: len=${rawBody.length}, MessageType=${mdmMessageType || 'NONE'}, hasStatus=${hasStatus}`);
+  logger.info(`[MDM Proxy]   Full body => ${bodyStr}`);
+
+  if (mdmMessageType) {
     const newTarget = targetUrl.replace(/\/mdm$/i, '/checkin');
-    logger.info(`[MDM Proxy]   MessageType detected — routing to /checkin (was: ${targetUrl})`);
+    logger.info(`[MDM Proxy]   MessageType=${mdmMessageType} — routing to /checkin (was: ${targetUrl})`);
     targetUrl = newTarget;
   }
 
