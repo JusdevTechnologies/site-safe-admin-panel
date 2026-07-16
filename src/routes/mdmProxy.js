@@ -7,6 +7,7 @@ const path = require('path');
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
+const ADEEnrollmentProfileService = require('../services/ADEEnrollmentProfileService');
 
 const router = express.Router();
 
@@ -429,10 +430,24 @@ router.all('*', async (req, res) => {
       );
 
       if (resp.status === 200) {
-        // Sign the device's own identity data back as a non-detached PKCS#7
-        // (content embedded, matching the device's own format). The device
-        // probably expects the server to return the same identity data it sent,
-        // re-signed with the server's cert as a "receipt".
+        // iOS 26.5: device sends PKCS#7 identity as an authenticated
+        // enrollment-profile download request.  Return the .mobileconfig
+        // so the device can install the MDM profile and proceed to check-in.
+        if (serial) {
+          try {
+            const { mobileconfig, mimeType } =
+              await ADEEnrollmentProfileService.generateProfileForDevice(serial);
+            logger.info(
+              `[MDM Proxy] Returning enrollment profile for ${serial} (${mobileconfig.length}B)`,
+            );
+            res.setHeader('Content-Type', mimeType);
+            return res.status(200).send(mobileconfig);
+          } catch (e) {
+            logger.warn(`[MDM Proxy] Profile generation failed, falling back: ${e.message}`);
+          }
+        }
+
+        // Fallback: return the identity data re-signed as non-detached PKCS#7
         const eContentSig = rawSignPlistNonDetached(eContent);
         if (eContentSig) {
           logger.info(
