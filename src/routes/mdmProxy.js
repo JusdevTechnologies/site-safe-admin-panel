@@ -363,6 +363,20 @@ router.all('*', async (req, res) => {
         `[MDM Proxy] Authenticate → ${NANO_URL()}/checkin → ${resp.status} body="${respBody}" (${Date.now() - startTime}ms)`,
       );
 
+      if (resp.status === 200) {
+        // Return PKCS#7-signed acknowledgment to the device so it receives
+        // a mutually-authenticated handshake response (iOS 26.5 requirement).
+        const ackXml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>Status</key><string>Acknowledged</string></dict></plist>`;
+        const ackSig = rawSignPlist(ackXml);
+        if (ackSig) {
+          res.setHeader('Content-Type', 'application/pkcs7-signature');
+          return res.status(200).send(ackSig);
+        }
+      }
+
+      // Fallback: pass through NanoMDM's response unchanged
       const exclude = ['transfer-encoding', 'connection', 'keep-alive', 'upgrade'];
       Object.entries(resp.headers).forEach(([k, v]) => {
         if (!exclude.includes(k.toLowerCase())) res.setHeader(k, v);
