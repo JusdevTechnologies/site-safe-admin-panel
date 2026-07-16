@@ -48,36 +48,126 @@ function extractPlistValue(xml, key) {
   return m ? m[1].trim() : null;
 }
 
+function describeAsn1(obj, depth) {
+  if (!obj || depth > 5) return '';
+  const indent = '  '.repeat(depth);
+  let s = `${indent}tagClass=${obj.tagClass} type=${obj.type} constructed=${obj.constructed}`;
+  if (obj.value !== null && obj.value !== undefined) {
+    if (typeof obj.value === 'string') {
+      s += ` value="${obj.value.length > 40 ? obj.value.substring(0, 40) + '...' : obj.value}"`;
+    } else if (Array.isArray(obj.value)) {
+      s += ` values=[${obj.value.length}]`;
+      for (const v of obj.value) s += '\n' + describeAsn1(v, depth + 1);
+    }
+  }
+  return s;
+}
+
+function walkAsn1(obj, targetTagClass, targetType, depth) {
+  if (!obj || depth > 8) return null;
+  if (obj.tagClass === targetTagClass && obj.type === targetType) return obj;
+  if (Array.isArray(obj.value)) {
+    for (const v of obj.value) {
+      const r = walkAsn1(v, targetTagClass, targetType, depth + 1);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
 function unwrapPkcs7(rawBody) {
   try {
-    const asn1 = forge.asn1.fromDer(forge.util.createBuffer(rawBody.toString('binary')));
-    const p7 = forge.pkcs7.messageFromAsn1(asn1);
-    if (p7.type !== forge.pki.oids.signedData) return null;
-    const rc = p7.rawCapture;
-    if (!rc || !rc.content || !Array.isArray(rc.content.value) || !rc.content.value[0]) return null;
-    const eContent = rc.content.value[0].value;
-    if (typeof eContent !== 'string' || !eContent.trim()) return null;
+    const bodyStr = rawBody.toString('binary');
+    const buf = forge.util.createBuffer(bodyStr);
+    const contentInfo = forge.asn1.fromDer(buf);
 
+    // ContentInfo: SEQUENCE { contentType OID, content [0] EXPLICIT }
+    if (
+      !contentInfo.constructed ||
+      !Array.isArray(contentInfo.value) ||
+      contentInfo.value.length < 2
+    ) {
+      logger.warn(`[MDM Proxy] ContentInfo invalid: ${describeAsn1(contentInfo, 0)}`);
+      return null;
+    }
+
+    // Check contentType OID = signedData (1.2.840.113549.1.7.2)
+    const oidNode = contentInfo.value[0];
+    if (oidNode.type !== forge.asn1.OID) {
+      logger.warn(`[MDM Proxy] ContentType is not OID: ${describeAsn1(oidNode, 0)}`);
+      return null;
+    }
+
+    // content [0] EXPLICIT → SignedData SEQUENCE
+    const explicitContent = contentInfo.value[1];
+    if (
+      !explicitContent.constructed ||
+      !Array.isArray(explicitContent.value) ||
+      !explicitContent.value[0]
+    ) {
+      logger.warn(`[MDM Proxy] Content field invalid: ${describeAsn1(explicitContent, 0)}`);
+      return null;
+    }
+    const signedData = explicitContent.value[0];
+
+    // SignedData: SEQUENCE { version, digestAlgorithms, encapContentInfo, ... }
+    if (
+      !signedData.constructed ||
+      !Array.isArray(signedData.value) ||
+      signedData.value.length < 3
+    ) {
+      logger.warn(`[MDM Proxy] SignedData invalid: ${describeAsn1(signedData, 0)}`);
+      return null;
+    }
+    const encapContentInfo = signedData.value[2];
+
+    // encapContentInfo: SEQUENCE { eContentType OID, eContent [0] EXPLICIT OCTET STRING }
+    if (
+      !encapContentInfo.constructed ||
+      !Array.isArray(encapContentInfo.value) ||
+      encapContentInfo.value.length < 2
+    ) {
+      logger.warn(`[MDM Proxy] encapContentInfo invalid: ${describeAsn1(encapContentInfo, 0)}`);
+      return null;
+    }
+    const eContentExplicit = encapContentInfo.value[1];
+    if (
+      !eContentExplicit.constructed ||
+      !Array.isArray(eContentExplicit.value) ||
+      !eContentExplicit.value[0]
+    ) {
+      logger.warn(`[MDM Proxy] eContent [0] tag invalid: ${describeAsn1(eContentExplicit, 0)}`);
+      return null;
+    }
+    const eContentOctet = eContentExplicit.value[0];
+    const eContent = typeof eContentOctet.value === 'string' ? eContentOctet.value : null;
+    if (!eContent || !eContent.trim()) {
+      logger.warn(`[MDM Proxy] eContent value empty/invalid: ${describeAsn1(eContentOctet, 0)}`);
+      return null;
+    }
+
+    // Extract certificates from SignedData (optional [0] IMPLICIT SET)
     const certs = [];
-    if (rc.certificates && Array.isArray(rc.certificates.value)) {
-      for (const certAsn1 of rc.certificates.value) {
-        try {
-          const der = forge.asn1.toDer(certAsn1).getBytes();
-          const cert = forge.pki.certificateFromAsn1(
-            forge.asn1.fromDer(forge.util.createBuffer(der, 'binary')),
-          );
-          certs.push(cert);
-        } catch (_) {}
+    for (let i = 3; i < signedData.value.length; i++) {
+      const v = signedData.value[i];
+      if (v.tagClass === 2 && v.type === 0 && v.constructed && Array.isArray(v.value)) {
+        for (const certAsn1 of v.value) {
+          try {
+            const certDer = forge.asn1.toDer(certAsn1).getBytes();
+            const cert = forge.pki.certificateFromAsn1(
+              forge.asn1.fromDer(forge.util.createBuffer(certDer, 'binary')),
+            );
+            certs.push(cert);
+          } catch (_) {}
+        }
+        break;
       }
     }
 
-    return {
-      eContent,
-      certificates: certs,
-      signerInfos: Array.isArray(rc.signerInfos) ? rc.signerInfos : [],
-    };
+    logger.info(`[MDM Proxy] unwrapPkcs7 OK — ${eContent.length}B eContent, ${certs.length} certs`);
+    return { eContent, certificates: certs };
   } catch (e) {
-    logger.warn(`[MDM Proxy] unwrapPkcs7 failed: ${e.message}`);
+    logger.warn(`[MDM Proxy] unwrapPkcs7 exception: ${e.message}`);
     return null;
   }
 }
@@ -132,7 +222,9 @@ router.all('*', async (req, res) => {
   if (isPkcs7) {
     const unwrapped = unwrapPkcs7(rawBody);
     if (!unwrapped) {
-      logger.error('[MDM Proxy] Failed to unwrap PKCS#7 body');
+      logger.error(
+        `[MDM Proxy] Failed to unwrap PKCS#7 — ct="${req.headers['content-type']}" body=${rawBody.length}B firstBytes=${rawBody.slice(0, 20).toString('hex')}`,
+      );
       return res.status(400).end();
     }
     const { eContent, certificates } = unwrapped;
