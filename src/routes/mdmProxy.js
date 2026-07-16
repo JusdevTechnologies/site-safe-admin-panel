@@ -326,6 +326,22 @@ function rawSignPlist(plistXml) {
   return Buffer.from(forge.asn1.toDer(p7.toAsn1()).getBytes(), 'binary');
 }
 
+// Sign plist XML with mdm-identity and return a NON-detached PKCS#7
+// (content embedded in the PKCS#7 body, matching the device's own format).
+function rawSignPlistNonDetached(plistXml) {
+  if (!mdmSigningKey || !mdmSigningCert) return null;
+  const p7 = forge.pkcs7.createSignedData();
+  p7.content = forge.util.createBuffer(plistXml);
+  p7.addCertificate(mdmSigningCert);
+  p7.addSigner({
+    key: mdmSigningKey,
+    certificate: mdmSigningCert,
+    digestAlgorithm: forge.pki.oids.sha256,
+  });
+  p7.sign({ detached: false });
+  return Buffer.from(forge.asn1.toDer(p7.toAsn1()).getBytes(), 'binary');
+}
+
 router.all('*', async (req, res) => {
   const startTime = Date.now();
   const rawBody = req.rawBody || Buffer.from('');
@@ -413,20 +429,17 @@ router.all('*', async (req, res) => {
       );
 
       if (resp.status === 200) {
-        // The device sent the PKCS#7 identity to ServerURL (/mdm), which is
-        // the command channel. Per Apple's MDM protocol, /mdm must respond
-        // with a COMMAND, not a check-in acknowledgment.
-        const cmdUuid = crypto.randomUUID();
-        const cmdXml = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict><key>Command</key><dict><key>RequestType</key><string>DeviceConfigured</string></dict><key>CommandUUID</key><string>${cmdUuid}</string></dict></plist>`;
-        const cmdSig = rawSignPlist(cmdXml);
-        if (cmdSig) {
+        // Sign the device's own identity data back as a non-detached PKCS#7
+        // (content embedded, matching the device's own format). The device
+        // probably expects the server to return the same identity data it sent,
+        // re-signed with the server's cert as a "receipt".
+        const eContentSig = rawSignPlistNonDetached(eContent);
+        if (eContentSig) {
           logger.info(
-            `[MDM Proxy] Responding to identity with DeviceConfigured (PKCS#7) uuid=${cmdUuid}`,
+            `[MDM Proxy] Responding to identity with non-detached PKCS#7 (${eContent.length}B eContent)`,
           );
           res.setHeader('Content-Type', 'application/pkcs7-signature');
-          return res.status(200).send(cmdSig);
+          return res.status(200).send(eContentSig);
         }
       }
 
