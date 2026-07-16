@@ -1,10 +1,53 @@
 const express = require('express');
 const axios = require('axios');
 const forge = require('node-forge');
+const fs = require('fs');
+const path = require('path');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
 
 const router = express.Router();
+
+// Load mdm-identity.p12 at startup for PKCS#7 re-signing
+let mdmSigningKey = null;
+let mdmSigningCert = null;
+
+function loadSigningIdentity() {
+  const certPath = environment.ade.identityCertPath;
+  const password = environment.ade.identityCertPassword;
+  if (!certPath || !password) {
+    logger.info('[MDM Proxy] No signing identity configured — re-signing disabled');
+    return;
+  }
+  try {
+    const p12Buffer = fs.readFileSync(path.resolve(certPath));
+    const buf = forge.util.createBuffer(p12Buffer.toString('binary'));
+    const asn1 = forge.asn1.fromDer(buf);
+    const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, password);
+
+    const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+    const keyBagsPlain = p12.getBags({ bagType: forge.pki.oids.keyBag });
+    const keyBag =
+      (keyBags[forge.pki.oids.pkcs8ShroudedKeyBag] &&
+        keyBags[forge.pki.oids.pkcs8ShroudedKeyBag][0]) ||
+      (keyBagsPlain[forge.pki.oids.keyBag] && keyBagsPlain[forge.pki.oids.keyBag][0]);
+    if (!keyBag) throw new Error('No private key in PKCS#12');
+
+    const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+    const certList = certBags[forge.pki.oids.certBag] || [];
+    if (certList.length === 0) throw new Error('No certificate in PKCS#12');
+
+    mdmSigningKey = keyBag.key;
+    mdmSigningCert = certList[0].cert;
+
+    const cn = mdmSigningCert.subject.getField('CN')?.value || 'unknown';
+    logger.info(`[MDM Proxy] Signing identity loaded: CN=${cn}`);
+  } catch (e) {
+    logger.error(`[MDM Proxy] Failed to load signing identity: ${e.message}`);
+  }
+}
+
+loadSigningIdentity();
 
 function unwrapPKCS7(rawBody) {
   try {
@@ -109,6 +152,31 @@ function extractCN(asn1Cert) {
   }
 }
 
+function reSignContent(bodyBytes) {
+  if (!mdmSigningKey || !mdmSigningCert) {
+    logger.warn('[MDM Proxy] No signing identity — cannot re-sign');
+    return null;
+  }
+  try {
+    const p7 = forge.pkcs7.createSignedData();
+    p7.content = forge.util.createBuffer(bodyBytes.toString('binary'));
+    p7.addCertificate(mdmSigningCert);
+    p7.addSigner({
+      key: mdmSigningKey,
+      certificate: mdmSigningCert,
+      digestAlgorithm: forge.pki.oids.sha256,
+    });
+    p7.sign({ detached: true });
+    const derBytes = forge.asn1.toDer(p7.toAsn1()).getBytes();
+    const newSig = Buffer.from(derBytes, 'binary');
+    logger.info(`[MDM Proxy] Re-signed body: new PKCS#7 = ${newSig.length} bytes`);
+    return newSig;
+  } catch (e) {
+    logger.warn(`[MDM Proxy] Re-sign failed: ${e.message}`);
+    return null;
+  }
+}
+
 router.all('*', async (req, res) => {
   const startTime = Date.now();
   const targetUrl = `${environment.nanomdm.baseUrl.replace(/\/+$/, '')}${req.originalUrl}`;
@@ -136,12 +204,20 @@ router.all('*', async (req, res) => {
 
     const unwrapped = unwrapPKCS7(rawBody);
     if (unwrapped) {
-      mdmSignature = unwrapped.mdmSignature;
+      // Re-sign with mdm-identity.p12 (SHA256) to avoid SHA1-RSA rejection by NanoMDM
+      const newSig = reSignContent(unwrapped.bodyBytes);
+      if (newSig) {
+        mdmSignature = newSig.toString('base64');
+        logger.info(
+          `[MDM Proxy]   Re-signed with mdm-identity.p12: header=${mdmSignature.length} chars`,
+        );
+      } else {
+        mdmSignature = unwrapped.mdmSignature;
+        logger.warn('[MDM Proxy]   Re-sign FAILED — using original PKCS#7 (SHA1-RSA will fail)');
+      }
       rawBody = unwrapped.bodyBytes;
       contentType = unwrapped.bodyContentType;
-      logger.info(
-        `[MDM Proxy]   Unwrapped: header=${mdmSignature.length} chars, body=${rawBody.length} bytes, ct=${contentType}`,
-      );
+      logger.info(`[MDM Proxy]   Unwrapped: body=${rawBody.length} bytes, ct=${contentType}`);
     } else {
       logger.warn('[MDM Proxy]   PKCS#7 unwrap FAILED — forwarding as-is');
     }
