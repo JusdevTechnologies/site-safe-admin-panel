@@ -1,9 +1,38 @@
 const express = require('express');
 const axios = require('axios');
+const forge = require('node-forge');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
 
 const router = express.Router();
+
+function extractCertFromPKCS7(rawBody) {
+  try {
+    const buf = forge.util.createBuffer(rawBody.toString('binary'));
+    const asn1 = forge.asn1.fromDer(buf);
+    const p7 = forge.pkcs7.messageFromAsn1(asn1);
+
+    if (p7.certificates && p7.certificates.length > 0) {
+      const cert = p7.certificates[0];
+      const certAsn1 = forge.pki.certificateToAsn1(cert);
+      const certDer = forge.asn1.toDer(certAsn1);
+      const derBytes = Buffer.from(certDer.getBytes(), 'binary');
+      const b64 = derBytes.toString('base64');
+
+      const cn =
+        cert.subject.getField('CN')?.value || 'unknown';
+
+      logger.info(`[MDM Proxy]   PKCS#7 extracted cert: CN=${cn}, DER=${derBytes.length} bytes`);
+
+      return b64;
+    }
+
+    logger.warn('[MDM Proxy]   PKCS#7 body has no certificates');
+  } catch (e) {
+    logger.warn(`[MDM Proxy]   PKCS#7 extraction failed: ${e.message}`);
+  }
+  return null;
+}
 
 router.all('*', async (req, res) => {
   const startTime = Date.now();
@@ -20,25 +49,38 @@ router.all('*', async (req, res) => {
   logger.info(`[MDM Proxy]   Target: ${targetUrl}`);
   logger.info(`[MDM Proxy]   IP:     ${req.ip}`);
 
-  const mdmSignature = req.headers['mdm-signature'];
+  const contentType = req.headers['content-type'] || '';
+  let mdmSignature = req.headers['mdm-signature'];
+  const rawBody = req.rawBody || Buffer.from('');
+
   if (mdmSignature) {
     logger.info(
-      `[MDM Proxy]   Mdm-Signature: PRESENT (${mdmSignature.length} chars, first 50: "${mdmSignature.substring(0, 50)}...")`,
+      `[MDM Proxy]   Mdm-Signature: PRESENT (${mdmSignature.length} chars)`,
     );
+  } else if (contentType === 'application/pkcs7-signature' && rawBody.length > 0) {
+    logger.info('[MDM Proxy]   Mdm-Signature: ABSENT, trying PKCS#7 extraction...');
+    logger.info(`[MDM Proxy]   Content-Type: ${contentType} — body is PKCS#7 signed`);
+
+    const certB64 = extractCertFromPKCS7(rawBody);
+    if (certB64) {
+      mdmSignature = certB64;
+      logger.info(
+        `[MDM Proxy]   PKCS#7 extraction SUCCESS. Injected Mdm-Signature (${mdmSignature.length} chars)`,
+      );
+    } else {
+      logger.warn('[MDM Proxy]   PKCS#7 extraction FAILED — forwarding without Mdm-Signature');
+    }
   } else {
-    logger.warn('[MDM Proxy]   Mdm-Signature: ABSENT');
+    logger.warn('[MDM Proxy]   Mdm-Signature: ABSENT (no PKCS#7 body to extract from)');
   }
 
   Object.entries(logHeaders).forEach(([key, value]) => {
     logger.info(`[MDM Proxy]   Header ${key}: ${value}`);
   });
 
-  const rawBody = req.rawBody || Buffer.from('');
   logger.info(`[MDM Proxy]   Body length: ${rawBody.length} bytes`);
   if (rawBody.length > 0) {
-    logger.info(
-      `[MDM Proxy]   Body (hex, first 500): ${rawBody.toString('hex').substring(0, 500)}`,
-    );
+    logger.info(`[MDM Proxy]   Body (hex, first 500): ${rawBody.toString('hex').substring(0, 500)}`);
     logger.info(`[MDM Proxy]   Body (utf8): ${rawBody.toString('utf8').substring(0, 500)}`);
   } else {
     logger.warn('[MDM Proxy]   Body: EMPTY');
@@ -46,7 +88,7 @@ router.all('*', async (req, res) => {
 
   try {
     const forwardHeaders = {
-      'Content-Type': req.headers['content-type'] || 'application/x-apple-aspen-mdm',
+      'Content-Type': contentType || 'application/x-apple-aspen-mdm',
       Accept: req.headers['accept'] || '*/*',
       'User-Agent': req.headers['user-agent'] || '',
       'X-Forwarded-For': req.headers['x-forwarded-for'] || req.ip,
