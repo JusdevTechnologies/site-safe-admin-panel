@@ -6,7 +6,7 @@ const environment = require('../../config/environment');
 
 const router = express.Router();
 
-function extractCMSFromPKCS7(rawBody) {
+function unwrapPKCS7(rawBody) {
   try {
     const buf = forge.util.createBuffer(rawBody.toString('binary'));
     const asn1 = forge.asn1.fromDer(buf);
@@ -17,18 +17,40 @@ function extractCMSFromPKCS7(rawBody) {
         ? p7.certificates[0].subject.getField('CN')?.value || 'unknown'
         : 'no-cert';
 
+    const innerContent = p7.content;
+    const innerBytes = innerContent
+      ? Buffer.from(innerContent.getBytes(), 'binary')
+      : Buffer.from('');
+
     logger.info(
       `[MDM Proxy]   PKCS#7 parsed: type=${p7.type}, certs=${p7.certificates ? p7.certificates.length : 0}, CN=${cn}`,
     );
-
-    const bodyB64 = rawBody.toString('base64');
     logger.info(
-      `[MDM Proxy]   Using entire PKCS#7 body as Mdm-Signature (${bodyB64.length} chars)`,
+      `[MDM Proxy]   PKCS#7 wrapper: ${rawBody.length} bytes, inner content: ${innerBytes.length} bytes`,
     );
-    return bodyB64;
+    logger.info(
+      `[MDM Proxy]   Inner content (utf8): ${innerBytes.toString('utf8').substring(0, 300)}`,
+    );
+
+    // Mdm-Signature header: the full PKCS#7 body (base64)
+    const headerB64 = rawBody.toString('base64');
+
+    // Forward body: the raw inner plist (not the PKCS#7 wrapper)
+    const bodyBytes = innerBytes;
+
+    // Forward Content-Type: raw MDM (not PKCS#7)
+    const bodyContentType = 'application/x-apple-aspen-mdm';
+
+    return {
+      mdmSignature: headerB64,
+      bodyBytes,
+      bodyContentType,
+    };
   } catch (e) {
     logger.warn(`[MDM Proxy]   PKCS#7 parsing failed: ${e.message}`);
   }
+  return null;
+}
   return null;
 }
 
@@ -47,24 +69,26 @@ router.all('*', async (req, res) => {
   logger.info(`[MDM Proxy]   Target: ${targetUrl}`);
   logger.info(`[MDM Proxy]   IP:     ${req.ip}`);
 
-  const contentType = req.headers['content-type'] || '';
+  let contentType = req.headers['content-type'] || '';
   let mdmSignature = req.headers['mdm-signature'];
-  const rawBody = req.rawBody || Buffer.from('');
+  let rawBody = req.rawBody || Buffer.from('');
 
   if (mdmSignature) {
     logger.info(`[MDM Proxy]   Mdm-Signature: PRESENT (${mdmSignature.length} chars)`);
   } else if (contentType === 'application/pkcs7-signature' && rawBody.length > 0) {
-    logger.info('[MDM Proxy]   Mdm-Signature: ABSENT, using PKCS#7 body as CMS header...');
+    logger.info('[MDM Proxy]   Mdm-Signature: ABSENT, unwrapping PKCS#7 body...');
     logger.info(`[MDM Proxy]   Content-Type: ${contentType} — body is PKCS#7 signed`);
 
-    const cmsB64 = extractCMSFromPKCS7(rawBody);
-    if (cmsB64) {
-      mdmSignature = cmsB64;
+    const unwrapped = unwrapPKCS7(rawBody);
+    if (unwrapped) {
+      mdmSignature = unwrapped.mdmSignature;
+      rawBody = unwrapped.bodyBytes;
+      contentType = unwrapped.bodyContentType;
       logger.info(
-        `[MDM Proxy]   Injected Mdm-Signature with full PKCS#7 body (${mdmSignature.length} chars)`,
+        `[MDM Proxy]   Unwrapped: header=${mdmSignature.length} chars, body=${rawBody.length} bytes, ct=${contentType}`,
       );
     } else {
-      logger.warn('[MDM Proxy]   PKCS#7 parsing FAILED — forwarding without Mdm-Signature');
+      logger.warn('[MDM Proxy]   PKCS#7 unwrap FAILED — forwarding as-is');
     }
   } else {
     logger.warn('[MDM Proxy]   Mdm-Signature: ABSENT (no PKCS#7 body to extract from)');
