@@ -228,37 +228,15 @@ function isPkcs7Body(rawBody) {
   return b === 0x30;
 }
 
-// Generate a unique per-enrollment leaf cert signed by the mdm-identity CA.
-// This avoids NanoMDM's "cert re-use not permitted" error because each
-// attempt presents a novel cert hash to the certauth module.
-function generateLeafCert() {
+// Sign plist XML with mdm-identity cert and return PKCS#7 detached sig Buffer
+function rawSignPlist(plistXml) {
   if (!mdmSigningKey || !mdmSigningCert) return null;
-  const leafKeys = forge.pki.rsa.generateKeyPair(2048);
-  const leaf = forge.pki.createCertificate();
-  leaf.serialNumber = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
-  const now = new Date();
-  leaf.validity.notBefore = now;
-  leaf.validity.notAfter = new Date(now.getTime() + 86400000);
-  leaf.publicKey = leafKeys.publicKey;
-  leaf.setIssuer(mdmSigningCert.subject.attributes.map((a) => ({ name: a.name, value: a.value })));
-  leaf.setSubject([
-    { name: 'commonName', value: `mdm-proxy-${crypto.randomUUID().substring(0, 8)}` },
-  ]);
-  leaf.sign(mdmSigningKey);
-  return { cert: leaf, key: leafKeys.privateKey };
-}
-
-// Sign plist XML with a leaf cert and include the CA (mdm-identity) in the
-// PKCS#7 cert bag so NanoMDM can build the chain.
-function signWithLeaf(plistXml, leaf) {
-  if (!leaf || !mdmSigningCert) return null;
   const p7 = forge.pkcs7.createSignedData();
   p7.content = forge.util.createBuffer(plistXml);
-  p7.addCertificate(leaf.cert);
   p7.addCertificate(mdmSigningCert);
   p7.addSigner({
-    key: leaf.key,
-    certificate: leaf.cert,
+    key: mdmSigningKey,
+    certificate: mdmSigningCert,
     digestAlgorithm: forge.pki.oids.sha256,
   });
   p7.sign({ detached: true });
@@ -297,18 +275,21 @@ router.all('*', async (req, res) => {
         `[MDM Proxy] Identity payload — UDID=${udid} Serial=${serial} certs=${certificates.length}`,
       );
 
-      // Generate a unique leaf cert for this enrollment so NanoMDM does not
-      // reject it with "cert re-use not permitted".
-      const leaf = generateLeafCert();
-      if (!leaf) {
-        logger.error('[MDM Proxy] Cannot generate leaf cert — no identity loaded');
-        return res.status(500).end();
-      }
+      // Try to remove any stale enrollment for this UDID via NanoMDM API
+      // so the mdm-identity cert can be reused for a fresh enrollment.
+      try {
+        await axios.delete(`${NANO_URL()}/v1/devices/${encodeURIComponent(udid)}`, {
+          headers: { Accept: '*/*' },
+          timeout: 5000,
+          validateStatus: () => true,
+        });
+      } catch (_) {}
 
+      // Sign with mdm-identity cert (trusted by NanoMDM's CA pool)
       const authXml = buildAuthenticatePlist(udid, serial);
-      const sig = signWithLeaf(authXml, leaf);
+      const sig = rawSignPlist(authXml);
       if (!sig) {
-        logger.error('[MDM Proxy] Cannot sign Authenticate');
+        logger.error('[MDM Proxy] Cannot sign Authenticate — no identity loaded');
         return res.status(500).end();
       }
 
@@ -326,8 +307,9 @@ router.all('*', async (req, res) => {
         timeout: 15000,
       });
 
+      const respBody = resp.data ? Buffer.from(resp.data).toString('utf8').substring(0, 500) : '';
       logger.info(
-        `[MDM Proxy] Authenticate → ${NANO_URL()}/checkin → ${resp.status} (${Date.now() - startTime}ms)`,
+        `[MDM Proxy] Authenticate → ${NANO_URL()}/checkin → ${resp.status} body="${respBody}" (${Date.now() - startTime}ms)`,
       );
 
       const exclude = ['transfer-encoding', 'connection', 'keep-alive', 'upgrade'];
