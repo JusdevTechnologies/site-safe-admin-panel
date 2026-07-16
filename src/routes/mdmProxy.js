@@ -46,6 +46,22 @@ function unwrapPKCS7(rawBody) {
       logger.warn('[MDM Proxy]   Inner content EMPTY — plist extraction failed');
     }
 
+    // Log every PKCS#7 certificate in PEM format
+    certs.forEach((certAsn1, idx) => {
+      try {
+        const cert = forge.pki.certificateFromAsn1(certAsn1);
+        const pem = forge.pki.certificateToPem(cert);
+        const subjectCN = cert.subject.getField('CN')?.value || 'unknown';
+        const issuerCN = cert.issuer.getField('CN')?.value || 'unknown';
+        logger.info(`[MDM Proxy]   Cert[${idx}]: subject=CN=${subjectCN}, issuer=CN=${issuerCN}`);
+        pem.split('\n').forEach((line) => {
+          logger.info(`[MDM Proxy]   PEM> ${line}`);
+        });
+      } catch (e) {
+        logger.warn(`[MDM Proxy]   Cert[${idx}]: failed to parse: ${e.message}`);
+      }
+    });
+
     return {
       mdmSignature: rawBody.toString('base64'),
       bodyBytes: innerBytes,
