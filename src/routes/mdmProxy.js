@@ -10,46 +10,87 @@ function unwrapPKCS7(rawBody) {
   try {
     const buf = forge.util.createBuffer(rawBody.toString('binary'));
     const asn1 = forge.asn1.fromDer(buf);
-    const p7 = forge.pkcs7.messageFromAsn1(asn1);
 
-    const cn =
-      p7.certificates && p7.certificates.length > 0
-        ? p7.certificates[0].subject.getField('CN')?.value || 'unknown'
-        : 'no-cert';
+    // ContentInfo: SEQUENCE { contentType OID, content [0] EXPLICIT { SignedData } }
+    const contentInfo = asn1;
+    const signedDataTagged = contentInfo.value[1];
+    const signedData = signedDataTagged.value[0];
 
-    const innerContent = p7.content;
-    const innerBytes = innerContent
-      ? Buffer.from(innerContent.getBytes(), 'binary')
-      : Buffer.from('');
+    // SignedData: SEQUENCE { version, digestAlgorithms, encapContentInfo, ... }
+    const encapContentInfo = signedData.value[2];
 
-    logger.info(
-      `[MDM Proxy]   PKCS#7 parsed: type=${p7.type}, certs=${p7.certificates ? p7.certificates.length : 0}, CN=${cn}`,
-    );
+    // EncapsulatedContentInfo: SEQUENCE { eContentType OID, eContent [0] EXPLICIT { OCTET STRING } }
+    let innerBytes = Buffer.from('');
+    if (encapContentInfo.value.length > 1) {
+      const eContentTagged = encapContentInfo.value[1];
+      // eContent is wrapped in [0] EXPLICIT → OCTET STRING
+      // May be constructed (tag 0x24) with nested primitive (tag 0x04)
+      const rawContent = extractOctetBytes(eContentTagged);
+      innerBytes = Buffer.from(rawContent, 'binary');
+    }
+
+    // Extract certificates from SignedData for logging
+    const certsTagged = signedData.value[3];
+    const certs = certsTagged && certsTagged.value ? certsTagged.value : [];
+    const cn = certs.length > 0 ? extractCN(certs[0]) || 'unknown' : 'no-cert';
+
+    logger.info(`[MDM Proxy]   PKCS#7 parsed: certs=${certs.length}, CN=${cn}`);
     logger.info(
       `[MDM Proxy]   PKCS#7 wrapper: ${rawBody.length} bytes, inner content: ${innerBytes.length} bytes`,
     );
-    logger.info(
-      `[MDM Proxy]   Inner content (utf8): ${innerBytes.toString('utf8').substring(0, 300)}`,
-    );
-
-    // Mdm-Signature header: the full PKCS#7 body (base64)
-    const headerB64 = rawBody.toString('base64');
-
-    // Forward body: the raw inner plist (not the PKCS#7 wrapper)
-    const bodyBytes = innerBytes;
-
-    // Forward Content-Type: raw MDM (not PKCS#7)
-    const bodyContentType = 'application/x-apple-aspen-mdm';
+    if (innerBytes.length > 0) {
+      logger.info(
+        `[MDM Proxy]   Inner content (utf8): ${innerBytes.toString('utf8').substring(0, 400)}`,
+      );
+    } else {
+      logger.warn('[MDM Proxy]   Inner content EMPTY — plist extraction failed');
+    }
 
     return {
-      mdmSignature: headerB64,
-      bodyBytes,
-      bodyContentType,
+      mdmSignature: rawBody.toString('base64'),
+      bodyBytes: innerBytes,
+      bodyContentType: 'application/x-apple-aspen-mdm',
     };
   } catch (e) {
-    logger.warn(`[MDM Proxy]   PKCS#7 parsing failed: ${e.message}`);
+    logger.warn(`[MDM Proxy]   PKCS#7 unwrap failed: ${e.message}`);
   }
   return null;
+}
+
+function extractOctetBytes(asn1Node) {
+  if (!asn1Node) return '';
+
+  // Context-specific [0] EXPLICIT (tag byte 0xa0): recurse into first child
+  const isContextTag0 =
+    asn1Node.tagClass === forge.asn1.Class.CONTEXT_SPECIFIC && asn1Node.type === 0;
+  if (isContextTag0 && Array.isArray(asn1Node.value) && asn1Node.value.length > 0) {
+    return extractOctetBytes(asn1Node.value[0]);
+  }
+
+  // OCTET STRING (universal tag 4): primitive → string, constructed → recurse
+  const isOctet =
+    asn1Node.tagClass === forge.asn1.Class.UNIVERSAL &&
+    asn1Node.type === forge.asn1.Type.OCTETSTRING;
+  if (isOctet) {
+    if (typeof asn1Node.value === 'string') {
+      return asn1Node.value;
+    }
+    if (Array.isArray(asn1Node.value)) {
+      return asn1Node.value.map((n) => extractOctetBytes(n)).join('');
+    }
+  }
+
+  return '';
+}
+
+function extractCN(asn1Cert) {
+  try {
+    const cert = forge.pki.certificateFromAsn1(asn1Cert);
+    const cn = cert.subject.getField('CN');
+    return cn ? cn.value : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 router.all('*', async (req, res) => {
