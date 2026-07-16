@@ -167,6 +167,7 @@ function unwrapPkcs7(rawBody) {
     // Extract certificates from SignedData (optional [0] IMPLICIT SET of Certificate)
     // In forge's ASN.1 parser, CONTEXT_SPECIFIC tagClass = 0x80 (not 2!)
     const certs = [];
+    const certHashes = [];
     for (let i = 3; i < signedData.value.length; i++) {
       const v = signedData.value[i];
       // certificates [0] IMPLICIT has tagClass=0x80 (CONTEXT_SPECIFIC), type=0
@@ -178,6 +179,9 @@ function unwrapPkcs7(rawBody) {
               forge.asn1.fromDer(forge.util.createBuffer(certDer, 'binary')),
             );
             certs.push(cert);
+            certHashes.push(
+              crypto.createHash('sha256').update(Buffer.from(certDer, 'binary')).digest('hex'),
+            );
           } catch (_) {}
         }
         break;
@@ -185,7 +189,7 @@ function unwrapPkcs7(rawBody) {
     }
 
     logger.info(`[MDM Proxy] unwrapPkcs7 OK — ${eContent.length}B eContent, ${certs.length} certs`);
-    return { eContent, certificates: certs };
+    return { eContent, certificates: certs, certHashes };
   } catch (e) {
     logger.warn(`[MDM Proxy] unwrapPkcs7 exception: ${e.message}`);
     return null;
@@ -243,10 +247,23 @@ function mdmSigningCertHash() {
   }
 }
 
+function computeCertHash(cert) {
+  if (!cert) return null;
+  try {
+    const asn1 = forge.pki.certificateToAsn1(cert);
+    return crypto
+      .createHash('sha256')
+      .update(Buffer.from(forge.asn1.toDer(asn1).getBytes(), 'binary'))
+      .digest('hex');
+  } catch {
+    return null;
+  }
+}
+
 // Remove stale cert_auth_associations row from NanoMDM's PostgreSQL so the
 // mdm-identity cert can be reused for a new enrollment.
-async function clearCertAuthPostgres() {
-  const hash = mdmSigningCertHash();
+async function clearCertAuthPostgres(hashOverride) {
+  const hash = hashOverride || mdmSigningCertHash();
   if (!hash) {
     logger.warn('[MDM Proxy] Cannot compute cert hash');
     return;
@@ -271,6 +288,24 @@ async function clearCertAuthPostgres() {
     }
   } catch (e) {
     logger.warn(`[MDM Proxy] cert auth cleanup failed: ${e.message}`);
+  } finally {
+    if (pool) await pool.end().catch(() => {});
+  }
+}
+
+async function associateCertPostgres(id, hash) {
+  const dbDsn = environment.nanomdm.dbDsn;
+  if (!dbDsn) return;
+  let pool;
+  try {
+    pool = new Pool({ connectionString: dbDsn, max: 1, idleTimeoutMillis: 5000 });
+    await pool.query(
+      'INSERT INTO cert_auth_associations (id, sha256, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) ON CONFLICT DO NOTHING',
+      [id, hash],
+    );
+    logger.info(`[MDM Proxy] Associated cert hash ${hash.substring(0, 16)}... with device ${id}`);
+  } catch (e) {
+    logger.warn(`[MDM Proxy] Failed to associate cert: ${e.message}`);
   } finally {
     if (pool) await pool.end().catch(() => {});
   }
@@ -309,7 +344,7 @@ router.all('*', async (req, res) => {
       );
       return res.status(400).end();
     }
-    const { eContent, certificates } = unwrapped;
+    const { eContent, certificates, certHashes } = unwrapped;
 
     const msgType = extractPlistValue(eContent, 'MessageType');
     const hasStatus = /<key>\s*Status\s*<\/key>/i.test(eContent);
@@ -319,9 +354,15 @@ router.all('*', async (req, res) => {
 
     // Non-standard identity payload – device capability data, not an MDM message
     if (!msgType && !hasStatus && udid) {
-      logger.info(
-        `[MDM Proxy] Identity payload — UDID=${udid} Serial=${serial} certs=${certificates.length}`,
-      );
+      // Dump ALL key-value pairs from the device info for analysis
+      const allKeys = [...eContent.matchAll(/<key>\s*([^<]+?)\s*<\/key>/gi)].map((m) => m[1]);
+      const kvDump = allKeys
+        .map((k) => {
+          const v = extractPlistValue(eContent, k) || 'NOT_A_STRING';
+          return `${k}=${v}`;
+        })
+        .join(' ');
+      logger.info(`[MDM Proxy] Identity payload — ${kvDump} certs=${certificates.length}`);
 
       // Remove stale cert_auth_associations row from NanoMDM's PostgreSQL
       // so the mdm-identity cert can be reused for a new enrollment.
@@ -335,6 +376,14 @@ router.all('*', async (req, res) => {
           validateStatus: () => true,
         });
       } catch (_) {}
+
+      // Pre-associate the device's own cert (from PKCS#7) with the enrollment
+      // so NanoMDM accepts the device's signature when it checks in directly.
+      const deviceHash = certHashes && certHashes[0];
+      if (deviceHash) {
+        await clearCertAuthPostgres(deviceHash);
+        await associateCertPostgres(udid, deviceHash);
+      }
 
       // Sign with mdm-identity cert (trusted by NanoMDM's CA pool)
       const authXml = buildAuthenticatePlist(udid, serial);
@@ -364,16 +413,14 @@ router.all('*', async (req, res) => {
       );
 
       if (resp.status === 200) {
-        // Return PKCS#7-signed acknowledgment to the device so it receives
-        // a mutually-authenticated handshake response (iOS 26.5 requirement).
+        // Return a standard XML plist acknowledgment — the device expects a
+        // normal MDM check-in response, not PKCS#7-wrapped data.
         const ackXml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>Status</key><string>Acknowledged</string></dict></plist>`;
-        const ackSig = rawSignPlist(ackXml);
-        if (ackSig) {
-          res.setHeader('Content-Type', 'application/pkcs7-signature');
-          return res.status(200).send(ackSig);
-        }
+        logger.info(`[MDM Proxy] Responding to identity with Acknowledged (plain plist)`);
+        res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+        return res.status(200).send(ackXml);
       }
 
       // Fallback: pass through NanoMDM's response unchanged
