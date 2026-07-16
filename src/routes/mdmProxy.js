@@ -413,14 +413,21 @@ router.all('*', async (req, res) => {
       );
 
       if (resp.status === 200) {
-        // Return a standard XML plist acknowledgment — the device expects a
-        // normal MDM check-in response, not PKCS#7-wrapped data.
-        const ackXml = `<?xml version="1.0" encoding="UTF-8"?>
+        // The device sent the PKCS#7 identity to ServerURL (/mdm), which is
+        // the command channel. Per Apple's MDM protocol, /mdm must respond
+        // with a COMMAND, not a check-in acknowledgment.
+        const cmdUuid = crypto.randomUUID();
+        const cmdXml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict><key>Status</key><string>Acknowledged</string></dict></plist>`;
-        logger.info(`[MDM Proxy] Responding to identity with Acknowledged (plain plist)`);
-        res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-        return res.status(200).send(ackXml);
+<plist version="1.0"><dict><key>Command</key><dict><key>RequestType</key><string>DeviceConfigured</string></dict><key>CommandUUID</key><string>${cmdUuid}</string></dict></plist>`;
+        const cmdSig = rawSignPlist(cmdXml);
+        if (cmdSig) {
+          logger.info(
+            `[MDM Proxy] Responding to identity with DeviceConfigured (PKCS#7) uuid=${cmdUuid}`,
+          );
+          res.setHeader('Content-Type', 'application/pkcs7-signature');
+          return res.status(200).send(cmdSig);
+        }
       }
 
       // Fallback: pass through NanoMDM's response unchanged
