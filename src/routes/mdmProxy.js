@@ -51,8 +51,6 @@ function unwrapPKCS7(rawBody) {
   }
   return null;
 }
-  return null;
-}
 
 router.all('*', async (req, res) => {
   const startTime = Date.now();
