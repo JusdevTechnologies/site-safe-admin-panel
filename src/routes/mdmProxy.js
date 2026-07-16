@@ -4,7 +4,6 @@ const forge = require('node-forge');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
 
@@ -164,19 +163,23 @@ function unwrapPkcs7(rawBody) {
       return null;
     }
 
-    // Extract certificates from SignedData (optional [0] IMPLICIT SET)
-    // Use walkAsn1 to find context-specific [0] tag (tagClass=2, type=0)
+    // Extract certificates from SignedData (optional [0] IMPLICIT SET of Certificate)
+    // In forge's ASN.1 parser, CONTEXT_SPECIFIC tagClass = 0x80 (not 2!)
     const certs = [];
-    const certsTag = walkAsn1(signedData, 2, 0, 0);
-    if (certsTag && Array.isArray(certsTag.value)) {
-      for (const certAsn1 of certsTag.value) {
-        try {
-          const certDer = forge.asn1.toDer(certAsn1).getBytes();
-          const cert = forge.pki.certificateFromAsn1(
-            forge.asn1.fromDer(forge.util.createBuffer(certDer, 'binary')),
-          );
-          certs.push(cert);
-        } catch (_) {}
+    for (let i = 3; i < signedData.value.length; i++) {
+      const v = signedData.value[i];
+      // certificates [0] IMPLICIT has tagClass=0x80 (CONTEXT_SPECIFIC), type=0
+      if (v.tagClass === 0x80 && v.type === 0 && v.constructed && Array.isArray(v.value)) {
+        for (const certAsn1 of v.value) {
+          try {
+            const certDer = forge.asn1.toDer(certAsn1).getBytes();
+            const cert = forge.pki.certificateFromAsn1(
+              forge.asn1.fromDer(forge.util.createBuffer(certDer, 'binary')),
+            );
+            certs.push(cert);
+          } catch (_) {}
+        }
+        break;
       }
     }
 
@@ -225,48 +228,41 @@ function isPkcs7Body(rawBody) {
   return b === 0x30;
 }
 
-// Compute SHA256 hash of the mdm-identity cert DER for NanoMDM cert_auth cleanup
-function mdmSigningCertHash() {
-  if (!mdmSigningCert) return null;
-  try {
-    const asn1 = forge.pki.certificateToAsn1(mdmSigningCert);
-    const der = forge.asn1.toDer(asn1).getBytes();
-    return crypto.createHash('sha256').update(Buffer.from(der, 'binary')).digest('hex');
-  } catch {
-    return null;
-  }
+// Generate a unique per-enrollment leaf cert signed by the mdm-identity CA.
+// This avoids NanoMDM's "cert re-use not permitted" error because each
+// attempt presents a novel cert hash to the certauth module.
+function generateLeafCert() {
+  if (!mdmSigningKey || !mdmSigningCert) return null;
+  const leafKeys = forge.pki.rsa.generateKeyPair(2048);
+  const leaf = forge.pki.createCertificate();
+  leaf.serialNumber = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+  const now = new Date();
+  leaf.validity.notBefore = now;
+  leaf.validity.notAfter = new Date(now.getTime() + 86400000);
+  leaf.publicKey = leafKeys.publicKey;
+  leaf.setIssuer(mdmSigningCert.subject.attributes.map((a) => ({ name: a.name, value: a.value })));
+  leaf.setSubject([
+    { name: 'commonName', value: `mdm-proxy-${crypto.randomUUID().substring(0, 8)}` },
+  ]);
+  leaf.sign(mdmSigningKey);
+  return { cert: leaf, key: leafKeys.privateKey };
 }
 
-// Remove stale cert_auth entries from NanoMDM's DB so the same signing cert
-// can be re-used for a new enrollment attempt.
-async function cleanupNanoMDMCertAuth() {
-  const hash = mdmSigningCertHash();
-  if (!hash) {
-    logger.warn('[MDM Proxy] No cert hash for cleanup');
-    return;
-  }
-  const dbDsn = environment.nanomdm.dbDsn;
-  if (!dbDsn) {
-    logger.warn('[MDM Proxy] No NANOMDM_DB_DSN — skipping cert cleanup');
-    return;
-  }
-  let pool;
-  try {
-    pool = new Pool({ connectionString: dbDsn, max: 1, idleTimeoutMillis: 5000 });
-    // Try common cert_auth table name used by NanoMDM
-    for (const table of ['cert_auth', 'certificate_authentications']) {
-      const { rows } = await pool.query(`DELETE FROM ${table} WHERE cert_hash = $1`, [hash]);
-      if (rows && rows.length > 0) {
-        logger.info(
-          `[MDM Proxy] Cleaned ${rows.length} cert_auth row(s) from ${table} for hash ${hash.substring(0, 16)}...`,
-        );
-      }
-    }
-  } catch (e) {
-    logger.warn(`[MDM Proxy] Cert auth cleanup failed (non-fatal): ${e.message}`);
-  } finally {
-    if (pool) await pool.end().catch(() => {});
-  }
+// Sign plist XML with a leaf cert and include the CA (mdm-identity) in the
+// PKCS#7 cert bag so NanoMDM can build the chain.
+function signWithLeaf(plistXml, leaf) {
+  if (!leaf || !mdmSigningCert) return null;
+  const p7 = forge.pkcs7.createSignedData();
+  p7.content = forge.util.createBuffer(plistXml);
+  p7.addCertificate(leaf.cert);
+  p7.addCertificate(mdmSigningCert);
+  p7.addSigner({
+    key: leaf.key,
+    certificate: leaf.cert,
+    digestAlgorithm: forge.pki.oids.sha256,
+  });
+  p7.sign({ detached: true });
+  return Buffer.from(forge.asn1.toDer(p7.toAsn1()).getBytes(), 'binary');
 }
 
 router.all('*', async (req, res) => {
@@ -301,13 +297,18 @@ router.all('*', async (req, res) => {
         `[MDM Proxy] Identity payload — UDID=${udid} Serial=${serial} certs=${certificates.length}`,
       );
 
-      // Clean up NanoMDM cert_auth so the mdm-identity cert can be re-used
-      await cleanupNanoMDMCertAuth();
+      // Generate a unique leaf cert for this enrollment so NanoMDM does not
+      // reject it with "cert re-use not permitted".
+      const leaf = generateLeafCert();
+      if (!leaf) {
+        logger.error('[MDM Proxy] Cannot generate leaf cert — no identity loaded');
+        return res.status(500).end();
+      }
 
       const authXml = buildAuthenticatePlist(udid, serial);
-      const sig = rawSignPlist(authXml);
+      const sig = signWithLeaf(authXml, leaf);
       if (!sig) {
-        logger.error('[MDM Proxy] Cannot sign Authenticate — no identity loaded');
+        logger.error('[MDM Proxy] Cannot sign Authenticate');
         return res.status(500).end();
       }
 
