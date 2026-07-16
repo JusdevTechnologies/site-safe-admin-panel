@@ -4,6 +4,7 @@ const forge = require('node-forge');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
 
@@ -228,6 +229,53 @@ function isPkcs7Body(rawBody) {
   return b === 0x30;
 }
 
+// Compute hex SHA256 of the mdm-identity cert DER
+function mdmSigningCertHash() {
+  if (!mdmSigningCert) return null;
+  try {
+    const asn1 = forge.pki.certificateToAsn1(mdmSigningCert);
+    return crypto
+      .createHash('sha256')
+      .update(Buffer.from(forge.asn1.toDer(asn1).getBytes(), 'binary'))
+      .digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+// Remove stale cert_auth_associations row from NanoMDM's PostgreSQL so the
+// mdm-identity cert can be reused for a new enrollment.
+async function clearCertAuthPostgres() {
+  const hash = mdmSigningCertHash();
+  if (!hash) {
+    logger.warn('[MDM Proxy] Cannot compute cert hash');
+    return;
+  }
+  const dbDsn = environment.nanomdm.dbDsn;
+  if (!dbDsn) {
+    logger.warn('[MDM Proxy] No NANOMDM_DB_DSN — skipping cert auth cleanup');
+    return;
+  }
+  let pool;
+  try {
+    pool = new Pool({ connectionString: dbDsn, max: 1, idleTimeoutMillis: 5000 });
+    const { rowCount } = await pool.query('DELETE FROM cert_auth_associations WHERE sha256 = $1', [
+      hash,
+    ]);
+    if (rowCount > 0) {
+      logger.info(
+        `[MDM Proxy] Deleted ${rowCount} cert_auth_associations row(s) for hash ${hash.substring(0, 16)}...`,
+      );
+    } else {
+      logger.info('[MDM Proxy] No stale cert_auth_associations row found');
+    }
+  } catch (e) {
+    logger.warn(`[MDM Proxy] cert auth cleanup failed: ${e.message}`);
+  } finally {
+    if (pool) await pool.end().catch(() => {});
+  }
+}
+
 // Sign plist XML with mdm-identity cert and return PKCS#7 detached sig Buffer
 function rawSignPlist(plistXml) {
   if (!mdmSigningKey || !mdmSigningCert) return null;
@@ -275,8 +323,11 @@ router.all('*', async (req, res) => {
         `[MDM Proxy] Identity payload — UDID=${udid} Serial=${serial} certs=${certificates.length}`,
       );
 
-      // Try to remove any stale enrollment for this UDID via NanoMDM API
-      // so the mdm-identity cert can be reused for a fresh enrollment.
+      // Remove stale cert_auth_associations row from NanoMDM's PostgreSQL
+      // so the mdm-identity cert can be reused for a new enrollment.
+      await clearCertAuthPostgres();
+
+      // Also try the HTTP DELETE API (might help on some NanoMDM builds)
       try {
         await axios.delete(`${NANO_URL()}/v1/devices/${encodeURIComponent(udid)}`, {
           headers: { Accept: '*/*' },
