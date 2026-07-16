@@ -142,7 +142,21 @@ function unwrapPkcs7(rawBody) {
       return null;
     }
     const eContentOctet = eContentExplicit.value[0];
-    const eContent = typeof eContentOctet.value === 'string' ? eContentOctet.value : null;
+
+    // OCTET STRING can be primitive (value is string) or constructed
+    // (value is array of inner OCTET STRINGs). Handle both.
+    function extractOctetValue(node) {
+      if (typeof node.value === 'string' && node.value.length > 0) return node.value;
+      if (Array.isArray(node.value)) {
+        for (const child of node.value) {
+          const v = extractOctetValue(child);
+          if (v) return v;
+        }
+      }
+      return null;
+    }
+
+    const eContent = extractOctetValue(eContentOctet);
     if (!eContent || !eContent.trim()) {
       logger.warn(`[MDM Proxy] eContent value empty/invalid: ${describeAsn1(eContentOctet, 0)}`);
       return null;
