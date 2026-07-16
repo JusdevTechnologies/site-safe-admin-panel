@@ -91,10 +91,12 @@ function unwrapPkcs7(rawBody) {
       return null;
     }
 
-    // Check contentType OID = signedData (1.2.840.113549.1.7.2)
+    // First child must be OID (tagClass=0, type=6) for signedData (1.2.840.113549.1.7.2)
+    // Note: forge.asn1.OID is undefined in this version, so use raw tag numbers.
     const oidNode = contentInfo.value[0];
-    if (oidNode.type !== forge.asn1.OID) {
-      logger.warn(`[MDM Proxy] ContentType is not OID: ${describeAsn1(oidNode, 0)}`);
+    const oidDer = forge.asn1.oidToDer(forge.pki.oids.signedData).getBytes();
+    if (oidNode.tagClass !== 0 || oidNode.type !== 6 || oidNode.value !== oidDer) {
+      logger.warn(`[MDM Proxy] ContentType is not signedData OID: ${describeAsn1(oidNode, 0)}`);
       return null;
     }
 
