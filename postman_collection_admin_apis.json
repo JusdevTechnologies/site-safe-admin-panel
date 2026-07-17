@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "admin-api-collection-site-safe",
     "name": "Site Safe Admin Panel - Complete APIs",
-    "description": "Complete API collection for Site Safe Admin Panel including:\n\n**Admin Panel APIs (31 Endpoints):**\n- Authentication: Admin login, token refresh, user info, logout\n- Dashboard: Statistics, recent activities, device history, OTP summary\n- Device Management: List devices, block camera, unblock camera\n- MDM Management: List NanoMDM devices, list profiles, install profile, remove profile, list commands\n- OTP Management: Generate, get current, list history, admin list, verify\n- Employee Management: List employees, create employee, get employee, update employee, delete employee\n- User Management: List admins, create admin, get user, update user, delete user\n\n**Mobile APIs (Existing):**\n- Device Registration\n- Device Status Monitoring\n- OTP-based Device Uninstallation\n\n**Authentication:** All admin endpoints require JWT token in Authorization header. Use Admin Login to obtain token.\n\n**API Base URL**: {{base_url}}/api/v1\n\n**Rate Limit**: 100 requests per 15 minutes",
+    "description": "Complete API collection for Site Safe Admin Panel including:\n\n**Admin Panel APIs (32 Endpoints):**\n- Authentication: Admin login, token refresh, user info, logout\n- Dashboard: Statistics, recent activities, device history, OTP summary\n- Device Management: List devices, block camera, unblock camera\n- MDM Management: List NanoMDM devices, list profiles, install profile, remove profile, list commands, toggle MDM removable\n- OTP Management: Generate, get current, list history, admin list, verify\n- Employee Management: List employees, create employee, get employee, update employee, delete employee\n- User Management: List admins, create admin, get user, update user, delete user\n\n**Mobile APIs (Existing):**\n- Device Registration\n- Device Status Monitoring\n- OTP-based Device Uninstallation\n\n**Authentication:** All admin endpoints require JWT token in Authorization header. Use Admin Login to obtain token.\n\n**API Base URL**: {{base_url}}/api/v1\n\n**Rate Limit**: 100 requests per 15 minutes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1876,6 +1876,141 @@
                 }
               ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Validation error\",\n  \"errors\": [\n    \"Device UDID is required\",\n    \"Profile identifier is required\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Toggle MDM Removable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"removable\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/mdm/devices/{{device_id}}/removable",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "mdm", "devices", "{{device_id}}", "removable"]
+            },
+            "description": "Toggle the \"Leave Remote Management\" option on an MDM-enrolled device by sending a Settings command.\n\n**Authentication:** Required (super_admin only)\n\n**URL Parameters:**\n- `device_id` (UUID): MDM device ID from the local database\n\n**Request Body:**\n- `removable` (boolean, required): `false` to hide \"Leave Remote Management\", `true` to show it\n\n**How It Works:**\nSends an MDM `Settings` command with `MDMOptions.IsMDMRemovable` to the device. This updates the enrollment profile's removable flag on the device without re-enrolling.\n\n**Response:** 200 OK with command UUID\n\n**Note:** After sending `removable: false`, the \"Leave Remote Management\" option will disappear from Settings > General > VPN & Device Management on the device. The change takes effect after the device processes the Settings command."
+          },
+          "response": [
+            {
+              "name": "Success - Set Non-Removable",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"removable\": false\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"MDM profile set to non-removable\",\n  \"data\": {\n    \"command_uuid\": \"cmd-def01234-5678-9abc-def0-123456789abc\",\n    \"udid\": \"00000000-0000-0000-0000-000000000001\",\n    \"serial_number\": \"ABC123456789\",\n    \"is_removable\": false,\n    \"status\": \"queued\"\n  }\n}"
+            },
+            {
+              "name": "Success - Set Removable",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"removable\": true\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"MDM profile set to removable\",\n  \"data\": {\n    \"command_uuid\": \"cmd-def01234-5678-9abc-def0-123456789abd\",\n    \"udid\": \"00000000-0000-0000-0000-000000000001\",\n    \"serial_number\": \"ABC123456789\",\n    \"is_removable\": true,\n    \"status\": \"queued\"\n  }\n}"
+            },
+            {
+              "name": "Error - Device Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"removable\": false\n}"
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"MDM device not found\",\n    \"code\": \"NOT_FOUND\",\n    \"statusCode\": 404\n  }\n}"
+            },
+            {
+              "name": "Error - Validation",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"removable\": \"invalid\"\n}"
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"removable must be a boolean (true/false)\",\n    \"code\": \"VALIDATION_ERROR\",\n    \"statusCode\": 400\n  }\n}"
             }
           ]
         },

@@ -3,6 +3,7 @@ const DeviceSyncService = require('./DeviceSyncService');
 const CameraRestrictionService = require('./CameraRestrictionService');
 const ProfileService = require('./ProfileService');
 const DeviceCommandService = require('./DeviceCommandService');
+const SettingsService = require('./SettingsService');
 
 module.exports = {
   NanoMDMService,
@@ -10,4 +11,5 @@ module.exports = {
   CameraRestrictionService,
   ProfileService,
   DeviceCommandService,
+  SettingsService,
 };

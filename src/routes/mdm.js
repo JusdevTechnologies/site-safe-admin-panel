@@ -33,6 +33,13 @@ router.post(
   MdmDeviceController.enableCamera.bind(MdmDeviceController),
 );
 
+router.post(
+  '/devices/:id/removable',
+  authenticate,
+  authorize('super_admin'),
+  MdmDeviceController.updateMdmRemovable.bind(MdmDeviceController),
+);
+
 router.get(
   '/devices/:id/commands',
   authenticate,
