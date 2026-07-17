@@ -5,24 +5,30 @@ const NanoMDMService = require('./NanoMDMService');
 const ExternalServiceError = require('../../exceptions/ExternalServiceError');
 
 class DeviceSyncService {
-  _extractDeviceInfo(nanoMDMDevice) {
+  _extractDeviceInfo(baseDevice, detailsDevice) {
     const enrollmentType =
-      nanoMDMDevice.type === 'Device' ? 'device' : nanoMDMDevice.type === 'User' ? 'user' : null;
+      baseDevice.type === 'Device' ? 'device' : baseDevice.type === 'User' ? 'user' : null;
+
+    const productName = detailsDevice?.product_name || null;
+    const osVersion = detailsDevice?.os_version || null;
+    const deviceName = detailsDevice?.device_name || null;
+    const buildVersion = detailsDevice?.build_version || null;
+
     return {
-      udid: nanoMDMDevice.udid || nanoMDMDevice.device_udid || nanoMDMDevice.enrollment_id,
-      serial_number: nanoMDMDevice.serial_number || null,
-      model: nanoMDMDevice.product_name || null,
-      os_version: nanoMDMDevice.os_version || null,
+      udid: baseDevice.udid || baseDevice.device_udid || baseDevice.enrollment_id,
+      serial_number: baseDevice.serial_number || null,
+      model: productName,
+      os_version: osVersion,
       enrollment_status: 'enrolled',
       enrollment_type: enrollmentType,
-      push_token_status: this._resolvePushStatus(nanoMDMDevice),
-      last_seen: nanoMDMDevice.last_seen || nanoMDMDevice.last_check_in || null,
+      push_token_status: this._resolvePushStatus(baseDevice),
+      last_seen: baseDevice.last_seen || baseDevice.last_check_in || null,
       device_info: {
-        build_version: nanoMDMDevice.build_version || null,
+        build_version: buildVersion,
         product_type: null,
-        push_magic: nanoMDMDevice.push_magic || null,
-        device_name: nanoMDMDevice.device_name || null,
-        raw: nanoMDMDevice,
+        push_magic: baseDevice.push_magic || null,
+        device_name: deviceName,
+        raw: baseDevice,
       },
     };
   }
@@ -60,7 +66,18 @@ class DeviceSyncService {
 
     for (const nanoDevice of nanoMDMDevices) {
       try {
-        const deviceInfo = this._extractDeviceInfo(nanoDevice);
+        const udid = nanoDevice.udid || nanoDevice.device_udid || nanoDevice.enrollment_id;
+
+        let detailsDevice = null;
+        try {
+          detailsDevice = await NanoMDMService.getDeviceDetails(udid);
+        } catch (detailErr) {
+          logger.warn(
+            `[MDM:DeviceSync] Device detail fetch failed for ${udid} (non-fatal): ${detailErr.message}`,
+          );
+        }
+
+        const deviceInfo = this._extractDeviceInfo(nanoDevice, detailsDevice);
         await this._upsertDevice(deviceInfo);
         synced += 1;
       } catch (error) {
@@ -108,7 +125,16 @@ class DeviceSyncService {
       });
     }
 
-    const deviceInfo = this._extractDeviceInfo(nanoDevice);
+    let detailsDevice = null;
+    try {
+      detailsDevice = await NanoMDMService.getDeviceDetails(udid);
+    } catch (detailErr) {
+      logger.warn(
+        `[MDM:DeviceSync] Device detail fetch failed for ${udid} (non-fatal): ${detailErr.message}`,
+      );
+    }
+
+    const deviceInfo = this._extractDeviceInfo(nanoDevice, detailsDevice);
     const device = await this._upsertDevice(deviceInfo);
 
     logger.info(`[MDM:DeviceSync] Single device sync complete | udid=${udid} | id=${device.id}`);

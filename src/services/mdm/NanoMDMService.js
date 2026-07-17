@@ -32,10 +32,6 @@ class NanoMDMService {
       SELECT
         d.id AS udid,
         d.serial_number,
-        d.product_name,
-        d.os_version,
-        d.build_version,
-        d.device_name,
         e.id AS enrollment_id,
         e.push_magic,
         e.token_hex AS push_token,
@@ -60,10 +56,6 @@ class NanoMDMService {
       SELECT
         d.id AS udid,
         d.serial_number,
-        d.product_name,
-        d.os_version,
-        d.build_version,
-        d.device_name,
         e.id AS enrollment_id,
         e.push_magic,
         e.token_hex AS push_token,
@@ -266,6 +258,18 @@ class NanoMDMService {
         last_seen: dbDevice.last_seen ? dbDevice.last_seen.toISOString() : null,
       };
     }
+
+    return this._request({
+      method: 'GET',
+      url: `/v1/devices/${encodeURIComponent(udid)}`,
+    });
+  }
+
+  async getDeviceDetails(udid) {
+    if (!udid) {
+      throw new ExternalServiceError('Device UDID is required');
+    }
+    logger.info(`[MDM:NanoMDM] Fetching device details from HTTP API for ${udid}`);
 
     return this._request({
       method: 'GET',
