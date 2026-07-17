@@ -15,6 +15,10 @@ class IdentityPayloadBuilder {
       PayloadContent: certificate.rawData,
     };
 
+    if (certificate.password) {
+      payload.Password = certificate.password;
+    }
+
     logger.info('[IdentityPayloadBuilder] Built identity payload');
     logger.info(`[IdentityPayloadBuilder]   PayloadUUID: ${payloadUuid}`);
     logger.info(`[IdentityPayloadBuilder]   PayloadIdentifier: ${payload.PayloadIdentifier}`);
@@ -23,6 +27,9 @@ class IdentityPayloadBuilder {
     );
     logger.info(
       `[IdentityPayloadBuilder]   Certificate CN: ${certificate.commonName || 'Unknown'}`,
+    );
+    logger.info(
+      `[IdentityPayloadBuilder]   Password: ${certificate.password ? 'set (' + certificate.password.length + ' chars)' : 'not set'}`,
     );
 
     return {

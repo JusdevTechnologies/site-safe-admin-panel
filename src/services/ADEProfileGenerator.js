@@ -42,7 +42,7 @@ class ADEProfileGenerator {
       topic,
       isSupervised: profile.supervised !== false,
       isMandatory: profile.isMandatory !== false,
-      isMDMRemovable: profile.allowProfileRemoval === true,
+      isMDMRemovable: true,
       awaitDeviceConfigured: profile.awaitDeviceConfigured !== false,
       identityCertificateUuid: profile.identityCertificateUuid || '',
       anchorCertificates: profile.anchorCertificates || [],

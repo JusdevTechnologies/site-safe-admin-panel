@@ -106,6 +106,7 @@ class CertificateLoader {
         rawData: data,
         expirationDate: validation.expirationDate,
         commonName: validation.commonName,
+        password: this._identityPassword,
       };
     } catch (err) {
       logger.error(
