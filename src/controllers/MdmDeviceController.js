@@ -40,6 +40,7 @@ class MdmDeviceController {
         model: d.model,
         os_version: d.os_version,
         enrollment_status: d.enrollment_status,
+        enrollment_type: d.enrollment_type,
         push_token_status: d.push_token_status,
         camera_state: d.camera_state,
         camera_status:
@@ -87,6 +88,7 @@ class MdmDeviceController {
             model: device.model,
             os_version: device.os_version,
             enrollment_status: device.enrollment_status,
+            enrollment_type: device.enrollment_type,
             push_token_status: device.push_token_status,
             camera_state: device.camera_state,
             camera_status:

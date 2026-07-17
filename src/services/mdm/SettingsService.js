@@ -4,6 +4,7 @@ const logger = require('../../utils/logger');
 const NanoMDMService = require('./NanoMDMService');
 const XMLSerializer = require('../profile/XMLSerializer');
 const NotFoundError = require('../../exceptions/NotFoundError');
+const ConflictError = require('../../exceptions/ConflictError');
 
 class SettingsService {
   async updateMdmRemovable(udid, removable) {
@@ -14,6 +15,12 @@ class SettingsService {
     const device = await db.MDMDevice.findOne({ where: { udid } });
     if (!device) {
       throw new NotFoundError(`Device ${udid} not found. Sync devices first.`);
+    }
+
+    if (device.enrollment_type !== 'device') {
+      throw new ConflictError(
+        'Toggle MDM removable is only available for ADE/DEP-enrolled devices (supervised)',
+      );
     }
 
     const nanoDevice = await NanoMDMService.getDevice(udid);

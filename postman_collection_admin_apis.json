@@ -1674,7 +1674,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"MDM devices retrieved successfully\",\n  \"data\": {\n    \"devices\": [\n      {\n        \"udid\": \"00000000-0000-0000-0000-000000000001\",\n        \"serial_number\": \"ABC123456789\",\n        \"device_name\": \"Samsung Galaxy S23\",\n        \"platform\": \"ios\",\n        \"os_version\": \"17.4.1\",\n        \"model\": \"iPhone 15 Pro\",\n        \"push_token\": \"fcm-token-123\",\n        \"last_seen\": \"2026-07-13T06:00:00.000Z\",\n        \"supervised\": true\n      }\n    ]\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"MDM devices retrieved successfully\",\n  \"data\": {\n    \"devices\": [\n      {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"udid\": \"00000000-0000-0000-0000-000000000001\",\n        \"serial_number\": \"ABC123456789\",\n        \"model\": \"iPhone 15 Pro\",\n        \"os_version\": \"17.4.1\",\n        \"enrollment_status\": \"enrolled\",\n        \"enrollment_type\": \"device\",\n        \"push_token_status\": \"valid\",\n        \"camera_state\": \"unrestricted\",\n        \"camera_status\": \"enabled\",\n        \"last_seen\": \"2026-07-13T06:00:00.000Z\",\n        \"last_sync_at\": \"2026-07-14T22:57:09.677Z\",\n        \"created_at\": \"2026-07-13T05:00:00.000Z\",\n        \"updated_at\": \"2026-07-14T22:57:09.677Z\"\n      }\n    ]\n  }\n}"
             }
           ]
         },
@@ -2011,6 +2011,31 @@
                 }
               ],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"removable must be a boolean (true/false)\",\n    \"code\": \"VALIDATION_ERROR\",\n    \"statusCode\": 400\n  }\n}"
+            },
+            {
+              "name": "Error - Not ADE Device",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"removable\": false\n}"
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"message\": \"Toggle MDM removable is only available for ADE/DEP-enrolled devices (supervised)\",\n    \"code\": \"DUPLICATE_RECORD\",\n    \"statusCode\": 409\n  }\n}"
             }
           ]
         },

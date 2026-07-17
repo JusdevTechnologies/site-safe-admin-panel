@@ -6,19 +6,22 @@ const ExternalServiceError = require('../../exceptions/ExternalServiceError');
 
 class DeviceSyncService {
   _extractDeviceInfo(nanoMDMDevice) {
+    const enrollmentType =
+      nanoMDMDevice.type === 'Device' ? 'device' : nanoMDMDevice.type === 'User' ? 'user' : null;
     return {
       udid: nanoMDMDevice.udid || nanoMDMDevice.device_udid || nanoMDMDevice.enrollment_id,
       serial_number: nanoMDMDevice.serial_number || null,
-      model: nanoMDMDevice.model || nanoMDMDevice.product_name || null,
-      os_version: nanoMDMDevice.os_version || nanoMDMDevice.osVersion || null,
-      enrollment_status: nanoMDMDevice.enrollment_status === 'enrolled' ? 'enrolled' : 'not_found',
+      model: nanoMDMDevice.product_name || null,
+      os_version: nanoMDMDevice.os_version || null,
+      enrollment_status: 'enrolled',
+      enrollment_type: enrollmentType,
       push_token_status: this._resolvePushStatus(nanoMDMDevice),
       last_seen: nanoMDMDevice.last_seen || nanoMDMDevice.last_check_in || null,
       device_info: {
-        build_version: nanoMDMDevice.build_version || nanoMDMDevice.buildVersion || null,
-        product_type: nanoMDMDevice.product_type || nanoMDMDevice.productType || null,
-        push_magic: nanoMDMDevice.push_magic || nanoMDMDevice.pushMagic || null,
-        device_name: nanoMDMDevice.device_name || nanoMDMDevice.deviceName || null,
+        build_version: nanoMDMDevice.build_version || null,
+        product_type: null,
+        push_magic: nanoMDMDevice.push_magic || null,
+        device_name: nanoMDMDevice.device_name || null,
         raw: nanoMDMDevice,
       },
     };
@@ -68,12 +71,11 @@ class DeviceSyncService {
     }
 
     const now = new Date();
-    await db.MDMDevice.update(
-      { last_sync_at: now },
-      { where: { last_sync_at: { [Op.ne]: now } } },
-    );
+    await db.MDMDevice.update({ last_sync_at: now }, { where: { last_sync_at: { [Op.ne]: now } } });
 
-    logger.info(`[MDM:DeviceSync] Sync complete | synced=${synced} | total=${nanoMDMDevices.length} | errors=${errors.length}`);
+    logger.info(
+      `[MDM:DeviceSync] Sync complete | synced=${synced} | total=${nanoMDMDevices.length} | errors=${errors.length}`,
+    );
 
     return {
       synced,
@@ -124,6 +126,7 @@ class DeviceSyncService {
         model: deviceInfo.model || device.model,
         os_version: deviceInfo.os_version || device.os_version,
         enrollment_status: deviceInfo.enrollment_status,
+        enrollment_type: deviceInfo.enrollment_type || device.enrollment_type,
         push_token_status: deviceInfo.push_token_status,
         last_seen: deviceInfo.last_seen || device.last_seen,
         last_sync_at: new Date(),
@@ -139,6 +142,7 @@ class DeviceSyncService {
         model: deviceInfo.model,
         os_version: deviceInfo.os_version,
         enrollment_status: deviceInfo.enrollment_status,
+        enrollment_type: deviceInfo.enrollment_type,
         push_token_status: deviceInfo.push_token_status,
         camera_state: 'unknown',
         last_seen: deviceInfo.last_seen,

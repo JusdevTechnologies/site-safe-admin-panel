@@ -28,6 +28,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('enrolled', 'not_found', 'pending'),
         defaultValue: 'pending',
       },
+      enrollment_type: {
+        type: DataTypes.ENUM('device', 'user'),
+        allowNull: true,
+      },
       push_token_status: {
         type: DataTypes.ENUM('valid', 'invalid', 'unknown'),
         defaultValue: 'unknown',

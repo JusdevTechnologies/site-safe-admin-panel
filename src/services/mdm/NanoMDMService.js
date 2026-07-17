@@ -32,6 +32,10 @@ class NanoMDMService {
       SELECT
         d.id AS udid,
         d.serial_number,
+        d.product_name,
+        d.os_version,
+        d.build_version,
+        d.device_name,
         e.id AS enrollment_id,
         e.push_magic,
         e.token_hex AS push_token,
@@ -56,6 +60,10 @@ class NanoMDMService {
       SELECT
         d.id AS udid,
         d.serial_number,
+        d.product_name,
+        d.os_version,
+        d.build_version,
+        d.device_name,
         e.id AS enrollment_id,
         e.push_magic,
         e.token_hex AS push_token,
@@ -280,11 +288,12 @@ class NanoMDMService {
       throw new ExternalServiceError('NanoMDM is not configured');
     }
 
-    const authHeader = authType === 'api_key' && apiKey
-      ? `Basic ${Buffer.from(`nanomdm:${apiKey}`).toString('base64')}`
-      : authType === 'bearer_token' && bearerToken
-        ? `Bearer ${bearerToken}`
-        : '';
+    const authHeader =
+      authType === 'api_key' && apiKey
+        ? `Basic ${Buffer.from(`nanomdm:${apiKey}`).toString('base64')}`
+        : authType === 'bearer_token' && bearerToken
+          ? `Bearer ${bearerToken}`
+          : '';
 
     const headers = { 'Content-Type': 'application/x-apple-aspen-mdm-command' };
     if (authHeader) headers['Authorization'] = authHeader;
