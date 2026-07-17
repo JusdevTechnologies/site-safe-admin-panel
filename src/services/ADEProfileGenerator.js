@@ -137,6 +137,7 @@ class ADEProfileGenerator {
       identityPayloadUuid,
       anchorCerts: rootCaCerts,
       signMessage: profileData.signMessage,
+      serverCapabilities: ['com.apple.mdm.depCapable'],
     });
     logger.info(`[ADEProfileGen] MDM payload built: UUID=${mdmPayload.PayloadUUID}`);
     logger.info(`[ADEProfileGen] MDM ServerURL: ${mdmPayload.ServerURL}`);

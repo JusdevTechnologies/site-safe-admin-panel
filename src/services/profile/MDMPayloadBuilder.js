@@ -15,6 +15,7 @@ class MDMPayloadBuilder {
     anchorCerts = [],
     accessRights = 8191,
     signMessage = true,
+    serverCapabilities = null,
   }) {
     const payloadUuid = uuidv4();
 
@@ -50,6 +51,10 @@ class MDMPayloadBuilder {
       payload.AnchorCertificates = anchorCerts.map((cert) => cert.rawData);
     }
 
+    if (serverCapabilities && serverCapabilities.length > 0) {
+      payload.ServerCapabilities = serverCapabilities;
+    }
+
     logger.info('[MDMPayloadBuilder] Built MDM payload');
     logger.info(`[MDMPayloadBuilder]   PayloadUUID: ${payloadUuid}`);
     logger.info(`[MDMPayloadBuilder]   ServerURL: ${serverUrl}`);
@@ -65,6 +70,11 @@ class MDMPayloadBuilder {
       `[MDMPayloadBuilder]   IdentityCertificateUUID: ${identityPayloadUuid || 'NOT SET'}`,
     );
     logger.info(`[MDMPayloadBuilder]   AnchorCertificates: ${anchorCerts.length} cert(s)`);
+    if (serverCapabilities && serverCapabilities.length > 0) {
+      logger.info(
+        `[MDMPayloadBuilder]   ServerCapabilities: ${JSON.stringify(serverCapabilities)}`,
+      );
+    }
 
     return payload;
   }
