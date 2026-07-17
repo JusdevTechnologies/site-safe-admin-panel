@@ -12,6 +12,7 @@ const UserController = require('../controllers/UserController');
 const OtpController = require('../controllers/OtpController');
 const EmployeeController = require('../controllers/EmployeeController');
 const MDMController = require('../controllers/MDMController');
+const MdmDeviceController = require('../controllers/MdmDeviceController');
 
 // Import validators
 const AdminValidator = require('../validators/AdminValidator');
@@ -377,6 +378,17 @@ router.get(
   authenticate,
   authorize('super_admin'),
   MDMController.getCommands.bind(MDMController),
+);
+
+/**
+ * Toggle MDM Removable Status
+ * POST /api/v1/admin/mdm/devices/:id/removable
+ */
+router.post(
+  '/admin/mdm/devices/:id/removable',
+  authenticate,
+  authorize('super_admin'),
+  MdmDeviceController.updateMdmRemovable.bind(MdmDeviceController),
 );
 
 /**
