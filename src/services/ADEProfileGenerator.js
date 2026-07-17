@@ -58,7 +58,7 @@ class ADEProfileGenerator {
     };
 
     if (profileData.isSupervised) {
-      profileData.targetDeviceType = 5;
+      profileData.targetDeviceType = 2;
     }
 
     logger.info(`[ADEProfileGen] Profile identifier: ${identifier}`);
