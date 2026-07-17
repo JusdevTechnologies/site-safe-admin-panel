@@ -57,9 +57,8 @@ class ADEProfileGenerator {
       department: profile.department || environment.ade.department,
     };
 
-    if (profileData.isSupervised) {
-      profileData.targetDeviceType = 2;
-    }
+    // TargetDeviceType omitted — let the profile install on any device.
+    // Supervision is granted by IsSupervised: true in the MDM payload.
 
     logger.info(`[ADEProfileGen] Profile identifier: ${identifier}`);
     logger.info(`[ADEProfileGen] Server URL: ${serverUrl}`);
