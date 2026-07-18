@@ -52,8 +52,8 @@ class SettingsService {
       error.details?.responseData?.error?.includes('duplicate key') ||
       error.message?.includes('duplicate key');
 
-    let commandUuid = uuidv4();
-    let plistXml = buildCommandPlist(commandUuid);
+    const commandUuid = uuidv4();
+    const plistXml = buildCommandPlist(commandUuid);
 
     try {
       await NanoMDMService.enqueueCommand(nanoDevice.enrollment_id, {
@@ -65,14 +65,8 @@ class SettingsService {
       }
 
       logger.warn(
-        `[MDM:Settings] Duplicate command UUID for device ${udid}, retrying with new UUID...`,
+        `[MDM:Settings] Command already queued for device ${udid} (duplicate UUID), sending push to trigger delivery...`,
       );
-
-      commandUuid = uuidv4();
-      plistXml = buildCommandPlist(commandUuid);
-      await NanoMDMService.enqueueCommand(nanoDevice.enrollment_id, {
-        command_payload: plistXml,
-      });
     }
 
     await NanoMDMService.sendPush(nanoDevice.enrollment_id).catch((err) => {
