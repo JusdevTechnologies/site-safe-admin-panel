@@ -28,14 +28,7 @@ class SettingsService {
       throw new NotFoundError(`Enrollment not found for device ${udid}`);
     }
 
-    const MAX_RETRIES = 3;
-
-    let commandUuid;
-    let lastError;
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      commandUuid = uuidv4();
-
+    const buildCommandPlist = (uuid) => {
       const commandDict = {
         Command: {
           RequestType: 'Settings',
@@ -48,49 +41,55 @@ class SettingsService {
             },
           ],
         },
-        CommandUUID: commandUuid,
+        CommandUUID: uuid,
       };
+      return XMLSerializer.serialize(commandDict);
+    };
 
-      const plistXml = XMLSerializer.serialize(commandDict);
+    const isDuplicateKeyError = (error) =>
+      error.details?.responseData?.command_error?.includes('duplicate key') ||
+      error.details?.responseData?.enqueue_error?.err?.includes('duplicate key') ||
+      error.details?.responseData?.error?.includes('duplicate key') ||
+      error.message?.includes('duplicate key');
 
-      try {
-        await NanoMDMService.enqueueCommand(nanoDevice.enrollment_id, {
-          command_payload: plistXml,
-        });
+    let commandUuid = uuidv4();
+    let plistXml = buildCommandPlist(commandUuid);
 
-        await NanoMDMService.sendPush(nanoDevice.enrollment_id).catch((err) => {
-          logger.warn(`[MDM:Settings] APNs push failed for ${udid} (non-fatal): ${err.message}`);
-        });
-
-        logger.info(
-          `[MDM:Settings] IsMDMRemovable=${removable} queued for device ${udid} (enrollment=${nanoDevice.enrollment_id})`,
-        );
-
-        return {
-          command_uuid: commandUuid,
-          udid,
-          serial_number: device.serial_number,
-          is_removable: removable,
-          status: 'queued',
-        };
-      } catch (error) {
-        const isDuplicateKey =
-          error.details?.responseData?.enqueue_error?.err?.includes('duplicate key') ||
-          error.details?.responseData?.error?.includes('duplicate key') ||
-          error.message?.includes('duplicate key');
-
-        if (!isDuplicateKey) {
-          throw error;
-        }
-
-        lastError = error;
-        logger.warn(
-          `[MDM:Settings] Duplicate command UUID on attempt ${attempt}/${MAX_RETRIES} for device ${udid}, retrying with new UUID...`,
-        );
+    try {
+      await NanoMDMService.enqueueCommand(nanoDevice.enrollment_id, {
+        command_payload: plistXml,
+      });
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        throw error;
       }
+
+      logger.warn(
+        `[MDM:Settings] Duplicate command UUID for device ${udid}, retrying with new UUID...`,
+      );
+
+      commandUuid = uuidv4();
+      plistXml = buildCommandPlist(commandUuid);
+      await NanoMDMService.enqueueCommand(nanoDevice.enrollment_id, {
+        command_payload: plistXml,
+      });
     }
 
-    throw lastError;
+    await NanoMDMService.sendPush(nanoDevice.enrollment_id).catch((err) => {
+      logger.warn(`[MDM:Settings] APNs push failed for ${udid} (non-fatal): ${err.message}`);
+    });
+
+    logger.info(
+      `[MDM:Settings] IsMDMRemovable=${removable} queued for device ${udid} (enrollment=${nanoDevice.enrollment_id})`,
+    );
+
+    return {
+      command_uuid: commandUuid,
+      udid,
+      serial_number: device.serial_number,
+      is_removable: removable,
+      status: 'queued',
+    };
   }
 }
 
