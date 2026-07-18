@@ -14,7 +14,7 @@ const {
 } = require('./profile');
 
 class ADEProfileGenerator {
-  async generateMobileconfig(profile, _enrollment) {
+  async generateMobileconfig(profile, _enrollment, identityCert = null) {
     const profileUuid = profile.profileUuid || uuidv4();
     logger.info('[ADEProfileGen] ========================================================');
     logger.info('[ADEProfileGen] === GENERATE MOBILECONFIG ===');
@@ -87,7 +87,7 @@ class ADEProfileGenerator {
 
     const certLoadStart = Date.now();
     const rootCaCerts = await CertificateLoader.loadRootCACertificates();
-    const identityCerts = await CertificateLoader.loadIdentityCertificate();
+    const identityCerts = identityCert || (await CertificateLoader.loadIdentityCertificate());
     logger.info(`[ADEProfileGen] Certificate loading took ${Date.now() - certLoadStart}ms`);
 
     logger.info(`[ADEProfileGen] Building ${rootCaCerts.length} root CA payload(s)`);

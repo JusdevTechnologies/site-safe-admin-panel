@@ -4,9 +4,11 @@ const logger = require('../utils/logger');
 const environment = require('../../config/environment');
 const { PROFILE_DOWNLOAD_MIME_TYPE } = require('../constants');
 const ADEProfileGenerator = require('./ADEProfileGenerator');
+const DeviceIdentityGenerator = require('./profile/DeviceIdentityGenerator');
 
 const ENROLL_URL = process.env.ENROLL_MDM_URL || environment.ade.profileUrl;
-const ENROLL_CHECKIN_URL = process.env.ENROLL_CHECKIN_URL || environment.ade.checkinUrl || `${ENROLL_URL}/checkin`;
+const ENROLL_CHECKIN_URL =
+  process.env.ENROLL_CHECKIN_URL || environment.ade.checkinUrl || `${ENROLL_URL}/checkin`;
 const ENROLL_TOPIC = process.env.ENROLL_TOPIC || environment.ade.topic;
 const ENROLL_ORG = process.env.ENROLL_ORG || environment.ade.organization || 'SiteSafe';
 const ENROLL_IDENTIFIER = process.env.ENROLL_PROFILE_IDENTIFIER || 'com.sitesafe.mdm.enrollment';
@@ -47,7 +49,15 @@ class ManualEnrollmentService {
     };
 
     try {
-      const mobileconfig = await ADEProfileGenerator.generateMobileconfig(profileConfig);
+      logger.info('[ManualEnroll] Generating per-device identity certificate...');
+      const deviceCert = DeviceIdentityGenerator.generate(serialNumber);
+      logger.info(`[ManualEnroll] Device identity cert created: CN=${deviceCert.commonName}`);
+
+      const mobileconfig = await ADEProfileGenerator.generateMobileconfig(
+        profileConfig,
+        null,
+        deviceCert,
+      );
       logger.info(`[ManualEnroll] Profile generated: ${mobileconfig.length} bytes`);
 
       await this._recordDownload(serialNumber, profileUuid);
@@ -172,7 +182,9 @@ class ManualEnrollmentService {
         error_message: errorMessage,
         failed_at: new Date(),
       });
-      logger.info(`[ManualEnroll] Enrollment marked as failed for ${serialNumber}: ${errorMessage}`);
+      logger.info(
+        `[ManualEnroll] Enrollment marked as failed for ${serialNumber}: ${errorMessage}`,
+      );
     }
   }
 
