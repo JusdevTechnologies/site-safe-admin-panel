@@ -169,6 +169,8 @@ class NanoMDMService {
       if (data && data.message) message = data.message;
       if (data && data.error)
         message = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+      if (data && data.enqueue_error && data.enqueue_error.err) message = data.enqueue_error.err;
+      if (data && data.push_error && data.push_error.err) message = data.push_error.err;
 
       return new ExternalServiceError(message, {
         status,

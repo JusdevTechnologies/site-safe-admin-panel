@@ -28,44 +28,69 @@ class SettingsService {
       throw new NotFoundError(`Enrollment not found for device ${udid}`);
     }
 
-    const commandUuid = uuidv4();
+    const MAX_RETRIES = 3;
 
-    const commandDict = {
-      Command: {
-        RequestType: 'Settings',
-        Settings: [
-          {
-            Item: 'MDMOptions',
-            MDMOptions: {
-              IsMDMRemovable: removable,
+    let commandUuid;
+    let lastError;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      commandUuid = uuidv4();
+
+      const commandDict = {
+        Command: {
+          RequestType: 'Settings',
+          Settings: [
+            {
+              Item: 'MDMOptions',
+              MDMOptions: {
+                IsMDMRemovable: removable,
+              },
             },
-          },
-        ],
-      },
-      CommandUUID: commandUuid,
-    };
+          ],
+        },
+        CommandUUID: commandUuid,
+      };
 
-    const plistXml = XMLSerializer.serialize(commandDict);
+      const plistXml = XMLSerializer.serialize(commandDict);
 
-    await NanoMDMService.enqueueCommand(nanoDevice.enrollment_id, {
-      command_payload: plistXml,
-    });
+      try {
+        await NanoMDMService.enqueueCommand(nanoDevice.enrollment_id, {
+          command_payload: plistXml,
+        });
 
-    await NanoMDMService.sendPush(nanoDevice.enrollment_id).catch((err) => {
-      logger.warn(`[MDM:Settings] APNs push failed for ${udid} (non-fatal): ${err.message}`);
-    });
+        await NanoMDMService.sendPush(nanoDevice.enrollment_id).catch((err) => {
+          logger.warn(`[MDM:Settings] APNs push failed for ${udid} (non-fatal): ${err.message}`);
+        });
 
-    logger.info(
-      `[MDM:Settings] IsMDMRemovable=${removable} queued for device ${udid} (enrollment=${nanoDevice.enrollment_id})`,
-    );
+        logger.info(
+          `[MDM:Settings] IsMDMRemovable=${removable} queued for device ${udid} (enrollment=${nanoDevice.enrollment_id})`,
+        );
 
-    return {
-      command_uuid: commandUuid,
-      udid,
-      serial_number: device.serial_number,
-      is_removable: removable,
-      status: 'queued',
-    };
+        return {
+          command_uuid: commandUuid,
+          udid,
+          serial_number: device.serial_number,
+          is_removable: removable,
+          status: 'queued',
+        };
+      } catch (error) {
+        const isDuplicateKey =
+          error.details?.responseData?.enqueue_error?.err?.includes('duplicate key') ||
+          error.details?.responseData?.error?.includes('duplicate key') ||
+          error.message?.includes('duplicate key');
+
+        if (!isDuplicateKey) {
+          throw error;
+        }
+
+        lastError = error;
+        logger.warn(
+          `[MDM:Settings] Duplicate command UUID on attempt ${attempt}/${MAX_RETRIES} for device ${udid}, retrying with new UUID...`,
+        );
+      }
+    }
+
+    throw lastError;
   }
 }
 
