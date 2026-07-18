@@ -1,3 +1,7 @@
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { execSync } = require('child_process');
 const forge = require('node-forge');
 const logger = require('../../utils/logger');
 
@@ -11,6 +15,8 @@ class DeviceIdentityGenerator {
     logger.info('[DeviceIdentityGen] ========================================================');
     logger.info('[DeviceIdentityGen] === GENERATE DEVICE IDENTITY CERTIFICATE ===');
     logger.info(`[DeviceIdentityGen] Serial number: ${serialNumber}`);
+
+    const friendlyName = `SiteSafe Device Identity - ${serialNumber}`;
 
     logger.info('[DeviceIdentityGen] Generating RSA 2048-bit keypair...');
     const keygenStart = Date.now();
@@ -63,30 +69,58 @@ class DeviceIdentityGenerator {
     logger.info(`[DeviceIdentityGen]   Serial: ${serial}`);
     logger.info(`[DeviceIdentityGen]   Expires: ${expirationDate.toISOString()}`);
 
-    logger.info('[DeviceIdentityGen] Packaging as PKCS#12...');
+    logger.info('[DeviceIdentityGen] Packaging as PKCS#12 via openssl (legacy format)...');
     const p12Start = Date.now();
 
-    const p12Asn1 = forge.pkcs12.toPkcs12Asn1(keys.privateKey, [cert], DEVICE_CERT_PASSWORD, {
-      friendlyName: `SiteSafe Device Identity - ${serialNumber}`,
-    });
-    const p12Der = forge.asn1.toDer(p12Asn1).getBytes();
-    const p12Buffer = Buffer.from(p12Der, 'binary');
-    logger.info(`[DeviceIdentityGen] PKCS#12 packaged in ${Date.now() - p12Start}ms`);
-    logger.info(`[DeviceIdentityGen] PKCS#12 size: ${p12Buffer.length} bytes`);
+    const tmpDir = os.tmpdir();
+    const tmpKey = path.join(tmpDir, `device-key-${serial}.pem`);
+    const tmpCrt = path.join(tmpDir, `device-crt-${serial}.pem`);
+    const tmpP12 = path.join(tmpDir, `device-p12-${serial}.p12`);
 
-    const totalTime = Date.now() - startTime;
-    logger.info('[DeviceIdentityGen] === END GENERATE DEVICE IDENTITY CERTIFICATE ===');
-    logger.info(`[DeviceIdentityGen] Total time: ${totalTime}ms`);
-    logger.info('[DeviceIdentityGen] ========================================================');
+    try {
+      fs.writeFileSync(tmpKey, forge.pki.privateKeyToPem(keys.privateKey));
+      fs.writeFileSync(tmpCrt, forge.pki.certificateToPem(cert));
 
-    return {
-      displayName: `Device Identity - ${serialNumber}`,
-      description: `Per-device identity certificate for ${serialNumber}`,
-      rawData: p12Buffer,
-      expirationDate,
-      commonName,
-      password: DEVICE_CERT_PASSWORD,
-    };
+      const cmd =
+        `openssl pkcs12 -export` +
+        ` -legacy -provider default -provider legacy` +
+        ` -in "${tmpCrt}"` +
+        ` -inkey "${tmpKey}"` +
+        ` -out "${tmpP12}"` +
+        ` -passout pass:${DEVICE_CERT_PASSWORD}` +
+        ` -name "${friendlyName}"`;
+
+      execSync(cmd, { stdio: 'pipe', timeout: 30000 });
+
+      const p12Buffer = fs.readFileSync(tmpP12);
+      logger.info(`[DeviceIdentityGen] PKCS#12 packaged in ${Date.now() - p12Start}ms`);
+      logger.info(`[DeviceIdentityGen] PKCS#12 size: ${p12Buffer.length} bytes`);
+      logger.info(`[DeviceIdentityGen] PKCS#12 algorithm: legacy (3DES/RC2) — iOS-compatible`);
+
+      const totalTime = Date.now() - startTime;
+      logger.info('[DeviceIdentityGen] === END GENERATE DEVICE IDENTITY CERTIFICATE ===');
+      logger.info(`[DeviceIdentityGen] Total time: ${totalTime}ms`);
+      logger.info('[DeviceIdentityGen] ========================================================');
+
+      return {
+        displayName: friendlyName,
+        description: `Per-device identity certificate for ${serialNumber}`,
+        rawData: p12Buffer,
+        expirationDate,
+        commonName,
+        password: DEVICE_CERT_PASSWORD,
+      };
+    } finally {
+      try {
+        fs.unlinkSync(tmpKey);
+      } catch (_) {}
+      try {
+        fs.unlinkSync(tmpCrt);
+      } catch (_) {}
+      try {
+        fs.unlinkSync(tmpP12);
+      } catch (_) {}
+    }
   }
 }
 
