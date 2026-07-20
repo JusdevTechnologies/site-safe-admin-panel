@@ -1,0 +1,864 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 2420" font-family="'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0f3460"/>
+      <stop offset="100%" stop-color="#1a5276"/>
+    </linearGradient>
+    <linearGradient id="androidGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3ddc84"/>
+      <stop offset="100%" stop-color="#2abf6a"/>
+    </linearGradient>
+    <linearGradient id="iosGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#007aff"/>
+      <stop offset="100%" stop-color="#0056b3"/>
+    </linearGradient>
+    <linearGradient id="adminGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6c5ce7"/>
+      <stop offset="100%" stop-color="#4a3cb5"/>
+    </linearGradient>
+    <linearGradient id="dbGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e17055"/>
+      <stop offset="100%" stop-color="#c0392b"/>
+    </linearGradient>
+    <linearGradient id="mdmGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00b894"/>
+      <stop offset="100%" stop-color="#008166"/>
+    </linearGradient>
+    <linearGradient id="sectionBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8f9fa"/>
+    </linearGradient>
+    <filter id="shadow1" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.08"/>
+    </filter>
+    <filter id="shadow2" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadow3" x="-3%" y="-3%" width="106%" height="112%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrowBlk" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2d3436"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#007aff"/>
+    </marker>
+    <marker id="arrowGrn" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#3ddc84"/>
+    </marker>
+    <marker id="arrowOrg" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#e17055"/>
+    </marker>
+    <marker id="arrowPrp" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#6c5ce7"/>
+    </marker>
+    <marker id="arrowTeal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#00b894"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="2400" height="2420" fill="#eef1f5" rx="0"/>
+
+  <!-- ============================================================ -->
+  <!-- TITLE HEADER -->
+  <!-- ============================================================ -->
+  <rect x="40" y="20" width="2320" height="64" rx="12" fill="url(#headerGrad)" filter="url(#shadow3)"/>
+  <text x="60" y="60" font-size="22" font-weight="700" fill="#ffffff" letter-spacing="0.5">SiteSafe Admin Panel &#x2014; Low Level Design (LLD) Diagram</text>
+  <text x="1200" y="60" font-size="13" fill="#8899aa" text-anchor="middle" font-weight="500">Enterprise MDM Middleware &#x2014; Samsung MDM Camera Blocking App</text>
+
+  <!-- Legend -->
+  <rect x="1700" y="20" width="660" height="64" rx="12" fill="#ffffff" filter="url(#shadow1)" opacity="0.95"/>
+  <text x="1715" y="44" font-size="11" font-weight="700" fill="#555">LEGEND</text>
+  <rect x="1715" y="50" width="14" height="14" rx="3" fill="#3ddc84"/>
+  <text x="1734" y="62" font-size="10" fill="#444">Android</text>
+  <rect x="1820" y="50" width="14" height="14" rx="3" fill="#007aff"/>
+  <text x="1839" y="62" font-size="10" fill="#444">iOS</text>
+  <rect x="1900" y="50" width="14" height="14" rx="3" fill="#6c5ce7"/>
+  <text x="1919" y="62" font-size="10" fill="#444">Admin</text>
+  <rect x="2000" y="50" width="14" height="14" rx="3" fill="#00b894"/>
+  <text x="2019" y="62" font-size="10" fill="#444">MDM</text>
+  <rect x="2100" y="50" width="14" height="14" rx="3" fill="#e17055"/>
+  <text x="2119" y="62" font-size="10" fill="#444">DB</text>
+  <rect x="2180" y="50" width="14" height="14" rx="3" fill="#16213e"/>
+  <text x="2199" y="62" font-size="10" fill="#444">Ext. System</text>
+  <line x1="2300" y1="57" x2="2330" y2="57" stroke="#999" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <text x="2335" y="62" font-size="10" fill="#444">Flow</text>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 1: SYSTEM CONTEXT (HIGH-LEVEL) -->
+  <!-- ============================================================ -->
+  <rect x="40" y="100" width="2320" height="340" rx="10" fill="url(#sectionBg)" filter="url(#shadow2)" stroke="#ddd" stroke-width="1"/>
+  <rect x="40" y="100" width="2320" height="36" rx="10" fill="url(#accentGrad)"/>
+  <rect x="40" y="126" width="2320" height="10" fill="url(#accentGrad)"/>
+  <text x="60" y="124" font-size="15" font-weight="700" fill="#ffffff">1. System Context &#x2014; High Level Architecture</text>
+
+  <!-- React Admin Panel -->
+  <rect x="80" y="155" width="200" height="60" rx="8" fill="url(#adminGrad)" filter="url(#shadow2)"/>
+  <text x="180" y="180" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">React Admin Panel</text>
+  <text x="180" y="198" font-size="10" fill="#ddd" text-anchor="middle">JWT Auth - super_admin</text>
+
+  <!-- Android Mobile App -->
+  <rect x="80" y="240" width="200" height="60" rx="8" fill="url(#androidGrad)" filter="url(#shadow2)"/>
+  <text x="180" y="265" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">Android App</text>
+  <text x="180" y="283" font-size="10" fill="#ddd" text-anchor="middle">FCM - Camera Control</text>
+
+  <!-- iOS Mobile App -->
+  <rect x="80" y="325" width="200" height="60" rx="8" fill="url(#iosGrad)" filter="url(#shadow2)"/>
+  <text x="180" y="350" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">iOS App</text>
+  <text x="180" y="368" font-size="10" fill="#ddd" text-anchor="middle">APNs - Camera Control</text>
+
+  <!-- Center: SiteSafe Middleware -->
+  <rect x="420" y="175" width="380" height="190" rx="10" fill="#ffffff" stroke="#0f3460" stroke-width="2" filter="url(#shadow3)"/>
+  <rect x="420" y="175" width="380" height="32" rx="10" fill="url(#headerGrad)"/>
+  <rect x="420" y="197" width="380" height="10" fill="url(#headerGrad)"/>
+  <text x="610" y="197" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">SiteSafe Admin Panel</text>
+  <text x="610" y="225" font-size="11" fill="#333" text-anchor="middle">Express.js - Node.js - PostgreSQL</text>
+  <text x="610" y="245" font-size="11" fill="#555" text-anchor="middle">JWT Auth - RBAC - Rate Limiting - Audit Logging</text>
+  <text x="610" y="265" font-size="11" fill="#555" text-anchor="middle">REST API - Helmet - CORS - Winston Logging</text>
+  <text x="610" y="285" font-size="11" fill="#555" text-anchor="middle">Sequelize ORM - Joi Validation</text>
+  <text x="610" y="305" font-size="11" fill="#555" text-anchor="middle">FCM Push - NanoMDM Integration</text>
+  <text x="610" y="325" font-size="11" fill="#555" text-anchor="middle">Firebase Admin SDK - Scheduler</text>
+  <text x="610" y="350" font-size="11" fill="#555" text-anchor="middle">AD Sync - Health Checks</text>
+
+  <!-- Right side: External Systems -->
+  <rect x="940" y="155" width="200" height="55" rx="8" fill="#16213e" filter="url(#shadow2)"/>
+  <text x="1040" y="178" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">NanoMDM Server</text>
+  <text x="1040" y="196" font-size="10" fill="#aaa" text-anchor="middle">Apple MDM Protocol</text>
+
+  <rect x="940" y="230" width="200" height="55" rx="8" fill="#16213e" filter="url(#shadow2)"/>
+  <text x="1040" y="253" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">NanoDEP</text>
+  <text x="1040" y="271" font-size="10" fill="#aaa" text-anchor="middle">Apple DEP Proxy</text>
+
+  <rect x="940" y="305" width="200" height="55" rx="8" fill="#16213e" filter="url(#shadow2)"/>
+  <text x="1040" y="328" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">Apple Business Manager</text>
+  <text x="1040" y="346" font-size="10" fill="#aaa" text-anchor="middle">ABM / Apple School Manager</text>
+
+  <rect x="1240" y="155" width="200" height="55" rx="8" fill="#16213e" filter="url(#shadow2)"/>
+  <text x="1340" y="178" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">Firebase Cloud Messaging</text>
+  <text x="1340" y="196" font-size="10" fill="#aaa" text-anchor="middle">Push Notifications - FCM</text>
+
+  <rect x="1240" y="230" width="200" height="55" rx="8" fill="#16213e" filter="url(#shadow2)"/>
+  <text x="1340" y="253" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">Apple Push Notification</text>
+  <text x="1340" y="271" font-size="10" fill="#aaa" text-anchor="middle">APNs</text>
+
+  <rect x="1240" y="305" width="200" height="55" rx="8" fill="#16213e" filter="url(#shadow2)"/>
+  <text x="1340" y="328" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">Apple ADE / DEP</text>
+  <text x="1340" y="346" font-size="10" fill="#aaa" text-anchor="middle">Device Enrollment Program</text>
+
+  <!-- PostgreSQL -->
+  <rect x="1560" y="175" width="180" height="180" rx="10" fill="url(#dbGrad)" filter="url(#shadow2)"/>
+  <text x="1650" y="210" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">PostgreSQL</text>
+  <text x="1650" y="230" font-size="10" fill="#fed" text-anchor="middle">------------</text>
+  <text x="1650" y="248" font-size="10" fill="#fed" text-anchor="middle">users</text>
+  <text x="1650" y="264" font-size="10" fill="#fed" text-anchor="middle">employees</text>
+  <text x="1650" y="280" font-size="10" fill="#fed" text-anchor="middle">devices</text>
+  <text x="1650" y="296" font-size="10" fill="#fed" text-anchor="middle">mdm_devices</text>
+  <text x="1650" y="312" font-size="10" fill="#fed" text-anchor="middle">ade_enrollments</text>
+  <text x="1650" y="328" font-size="10" fill="#fed" text-anchor="middle">audit_logs</text>
+  <text x="1650" y="344" font-size="10" fill="#fed" text-anchor="middle">+9 more tables</text>
+
+  <!-- ARROWS: Admin Panel -> Middleware -->
+  <line x1="280" y1="185" x2="415" y2="220" stroke="#6c5ce7" stroke-width="2" marker-end="url(#arrowPrp)"/>
+  <text x="320" y="182" font-size="9" fill="#6c5ce7" font-weight="600">JWT Auth API</text>
+
+  <!-- Android -> Middleware -->
+  <line x1="280" y1="270" x2="415" y2="270" stroke="#3ddc84" stroke-width="2" marker-end="url(#arrowGrn)"/>
+  <text x="350" y="263" font-size="9" fill="#2abf6a" font-weight="600">Mobile API + FCM</text>
+
+  <!-- iOS -> Middleware -->
+  <line x1="280" y1="355" x2="415" y2="320" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="330" y="342" font-size="9" fill="#007aff" font-weight="600">Mobile API + APNs</text>
+
+  <!-- Middleware -> NanoMDM -->
+  <line x1="800" y1="210" x2="935" y2="195" stroke="#00b894" stroke-width="2" marker-end="url(#arrowTeal)"/>
+  <text x="850" y="193" font-size="9" fill="#00b894" font-weight="600">Enqueue + Push</text>
+
+  <!-- NanoMDM -> ABM via NanoDEP -->
+  <line x1="1040" y1="285" x2="1040" y2="300" stroke="#555" stroke-width="1.5" marker-end="url(#arrowBlk)" stroke-dasharray="4,3"/>
+
+  <!-- Middleware -> FCM -->
+  <line x1="800" y1="260" x2="1235" y2="195" stroke="#e17055" stroke-width="2" marker-end="url(#arrowOrg)"/>
+  <text x="980" y="214" font-size="9" fill="#e17055" font-weight="600">Push Notifications</text>
+
+  <!-- Middleware -> PostgreSQL -->
+  <line x1="800" y1="300" x2="1555" y2="290" stroke="#e17055" stroke-width="2" marker-end="url(#arrowOrg)"/>
+  <text x="1150" y="306" font-size="9" fill="#e17055" font-weight="600">Sequelize ORM</text>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 2: APPLICATION LAYERED ARCHITECTURE (Request Flow) -->
+  <!-- ============================================================ -->
+  <rect x="40" y="460" width="1140" height="550" rx="10" fill="url(#sectionBg)" filter="url(#shadow2)" stroke="#ddd" stroke-width="1"/>
+  <rect x="40" y="460" width="1140" height="36" rx="10" fill="url(#accentGrad)"/>
+  <rect x="40" y="486" width="1140" height="10" fill="url(#accentGrad)"/>
+  <text x="60" y="484" font-size="15" font-weight="700" fill="#ffffff">2. Application Request Flow &#x2014; Layered Middleware Architecture</text>
+
+  <!-- Layer: HTTP Transport -->
+  <rect x="60" y="515" width="1100" height="44" rx="6" fill="#e8e8ee" stroke="#bbb" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="527" font-size="11" font-weight="700" fill="#444" text-anchor="middle">HTTP / HTTPS Transport</text>
+  <text x="610" y="545" font-size="10" fill="#666" text-anchor="middle">Incoming Request - Express.js Server (bin/www - port 3000)</text>
+
+  <line x1="610" y1="559" x2="610" y2="572" stroke="#2d3436" stroke-width="2" marker-end="url(#arrowBlk)"/>
+
+  <rect x="60" y="575" width="1100" height="44" rx="6" fill="#d5d5e8" stroke="#9999bb" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="590" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Middleware Stack</text>
+  <text x="610" y="607" font-size="10" fill="#555" text-anchor="middle">helmet() - cors() - body-parser - requestLogger - rateLimiter()</text>
+
+  <line x1="610" y1="619" x2="610" y2="632" stroke="#2d3436" stroke-width="2" marker-end="url(#arrowBlk)"/>
+
+  <rect x="60" y="635" width="1100" height="44" rx="6" fill="#e8d5e8" stroke="#c09bc0" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="650" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Security &amp; Authentication Layer</text>
+  <text x="610" y="667" font-size="10" fill="#555" text-anchor="middle">authenticate (JWT) - authorize (RBAC) - adeAuth (API Key) - rateLimiter (auth)</text>
+
+  <line x1="610" y1="679" x2="610" y2="692" stroke="#2d3436" stroke-width="2" marker-end="url(#arrowBlk)"/>
+
+  <rect x="60" y="695" width="1100" height="44" rx="6" fill="#e8e8d5" stroke="#bbb990" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="710" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Validation Layer</text>
+  <text x="610" y="727" font-size="10" fill="#555" text-anchor="middle">Joi Schemas - AdminValidator - MobileValidator - ADEValidator - Input sanitization</text>
+
+  <line x1="610" y1="739" x2="610" y2="752" stroke="#2d3436" stroke-width="2" marker-end="url(#arrowBlk)"/>
+
+  <rect x="60" y="755" width="1100" height="28" rx="6" fill="#cbe8cb" stroke="#88bb88" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="773" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Routes (Express Router)</text>
+
+  <rect x="60" y="788" width="360" height="58" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="240" y="806" font-size="10" font-weight="700" fill="#333" text-anchor="middle">Admin / Management Routes</text>
+  <text x="240" y="823" font-size="9" fill="#555" text-anchor="middle">/api/v1/auth/ - /api/v1/admin/*</text>
+  <text x="240" y="838" font-size="9" fill="#555" text-anchor="middle">/api/v1/mdm/* - /api/v1/users/*</text>
+
+  <rect x="430" y="788" width="360" height="58" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="806" font-size="10" font-weight="700" fill="#333" text-anchor="middle">Mobile &amp; Public Routes</text>
+  <text x="610" y="823" font-size="9" fill="#555" text-anchor="middle">/api/v1/mobile/* - /enroll/*</text>
+  <text x="610" y="838" font-size="9" fill="#555" text-anchor="middle">/mdm/* (proxy) - /health</text>
+
+  <rect x="800" y="788" width="360" height="58" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="980" y="806" font-size="10" font-weight="700" fill="#333" text-anchor="middle">Apple ADE / Server Routes</text>
+  <text x="980" y="823" font-size="9" fill="#555" text-anchor="middle">/server/device/* - /server/profile/*</text>
+  <text x="980" y="838" font-size="9" fill="#555" text-anchor="middle">/server/enrollment/* - /server/certificate/*</text>
+
+  <line x1="610" y1="848" x2="610" y2="860" stroke="#2d3436" stroke-width="2" marker-end="url(#arrowBlk)"/>
+
+  <rect x="60" y="863" width="1100" height="28" rx="6" fill="#e8d5c0" stroke="#bb9966" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="881" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Controllers (14 thin HTTP handlers)</text>
+
+  <rect x="60" y="896" width="260" height="45" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="190" y="914" font-size="10" font-weight="700" fill="#333" text-anchor="middle">AuthController</text>
+  <text x="190" y="929" font-size="9" fill="#555" text-anchor="middle">Login, Register, Refresh</text>
+
+  <rect x="330" y="896" width="260" height="45" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="460" y="914" font-size="10" font-weight="700" fill="#333" text-anchor="middle">DeviceController</text>
+  <text x="460" y="929" font-size="9" fill="#555" text-anchor="middle">Block/Unblock, List</text>
+
+  <rect x="600" y="896" width="260" height="45" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="730" y="914" font-size="10" font-weight="700" fill="#333" text-anchor="middle">MobileController</text>
+  <text x="730" y="929" font-size="9" fill="#555" text-anchor="middle">Register, Status, Punch, OTP</text>
+
+  <rect x="870" y="896" width="290" height="45" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="1015" y="914" font-size="10" font-weight="700" fill="#333" text-anchor="middle">ADE / MDM Controllers (8)</text>
+  <text x="1015" y="929" font-size="9" fill="#555" text-anchor="middle">Enrollment, Profile, Cert, Device</text>
+
+  <line x1="610" y1="943" x2="610" y2="956" stroke="#2d3436" stroke-width="2" marker-end="url(#arrowBlk)"/>
+
+  <rect x="60" y="959" width="1100" height="28" rx="6" fill="#c0dde8" stroke="#6699bb" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="977" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Services &#x2014; Business Logic Layer (20 service modules)</text>
+
+  <rect x="60" y="992" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="145" y="1014" font-size="9" fill="#333" text-anchor="middle">AuthService</text>
+
+  <rect x="240" y="992" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="325" y="1014" font-size="9" fill="#333" text-anchor="middle">DeviceService</text>
+
+  <rect x="420" y="992" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="505" y="1014" font-size="9" fill="#333" text-anchor="middle">MobileService</text>
+
+  <rect x="600" y="992" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="685" y="1014" font-size="9" fill="#333" text-anchor="middle">OtpService</text>
+
+  <rect x="780" y="992" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="865" y="1014" font-size="9" fill="#333" text-anchor="middle">EmployeeService</text>
+
+  <rect x="960" y="992" width="200" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="1060" y="1014" font-size="9" fill="#333" text-anchor="middle">UserService</text>
+
+  <rect x="60" y="1033" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="145" y="1055" font-size="9" fill="#333" text-anchor="middle">ProfileService</text>
+
+  <rect x="240" y="1033" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="325" y="1055" font-size="9" fill="#333" text-anchor="middle">CameraRestrictionSvc</text>
+
+  <rect x="420" y="1033" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="505" y="1055" font-size="9" fill="#333" text-anchor="middle">DashboardService</text>
+
+  <rect x="600" y="1033" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="685" y="1055" font-size="9" fill="#333" text-anchor="middle">MDMCommandService</text>
+
+  <rect x="780" y="1033" width="170" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="865" y="1055" font-size="9" fill="#333" text-anchor="middle">DeviceSyncService</text>
+
+  <rect x="960" y="1033" width="200" height="36" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="1060" y="1055" font-size="9" fill="#333" text-anchor="middle">ADE Services (7 modules)</text>
+
+  <line x1="610" y1="1071" x2="610" y2="1084" stroke="#2d3436" stroke-width="2" marker-end="url(#arrowBlk)"/>
+
+  <!-- Data Layer -->
+  <rect x="60" y="1087" width="1100" height="44" rx="6" fill="#f5e8d5" stroke="#cc9966" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="1102" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Data Access Layer</text>
+  <text x="610" y="1119" font-size="10" fill="#555" text-anchor="middle">Sequelize Models (16) - PostgreSQL Queries - Connection Pool - Migrations - Seeders</text>
+
+  <!-- Integration Layer -->
+  <rect x="60" y="1136" width="1100" height="44" rx="6" fill="#e8d5f5" stroke="#aa88cc" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="1151" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Integration Layer</text>
+  <text x="610" y="1168" font-size="10" fill="#555" text-anchor="middle">NanoMDMService (HTTP Client) - FirebaseService (FCM Push) - Profile Builders (XML/Plist/Signing)</text>
+
+  <!-- Cross-cutting -->
+  <rect x="60" y="1185" width="1100" height="44" rx="6" fill="#f5d5d5" stroke="#cc8888" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="610" y="1200" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Cross-Cutting Concerns</text>
+  <text x="610" y="1217" font-size="10" fill="#555" text-anchor="middle">Error Handler (AppError hierarchy) - Winston Logger - Scheduler (SyncScheduler) - RBAC - Rate Limiting</text>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 3: iOS ADE ENROLLMENT FLOW -->
+  <!-- ============================================================ -->
+  <rect x="1200" y="460" width="1160" height="500" rx="10" fill="url(#sectionBg)" filter="url(#shadow2)" stroke="#ddd" stroke-width="1"/>
+  <rect x="1200" y="460" width="1160" height="36" rx="10" fill="url(#accentGrad)"/>
+  <rect x="1200" y="486" width="1160" height="10" fill="url(#accentGrad)"/>
+  <text x="1220" y="484" font-size="15" font-weight="700" fill="#ffffff">3. iOS ADE Enrollment Flow &#x2014; Apple Business Manager - NanoDEP - Middleware - NanoMDM</text>
+
+  <!-- Step 1 -->
+  <rect x="1230" y="515" width="220" height="80" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1230" y="515" width="220" height="20" rx="6" fill="url(#iosGrad)"/>
+  <rect x="1230" y="529" width="220" height="6" fill="url(#iosGrad)"/>
+  <text x="1235" y="531" font-size="9" font-weight="700" fill="#fff">Step 1</text>
+  <text x="1245" y="554" font-size="10" font-weight="600" fill="#333">ABM Device Assignment</text>
+  <text x="1245" y="570" font-size="9" fill="#666">Admin assigns device serials</text>
+  <text x="1245" y="586" font-size="9" fill="#666">in Apple Business Manager</text>
+
+  <line x1="1450" y1="555" x2="1520" y2="555" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 2 -->
+  <rect x="1530" y="515" width="220" height="80" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1530" y="515" width="220" height="20" rx="6" fill="url(#iosGrad)"/>
+  <rect x="1530" y="529" width="220" height="6" fill="url(#iosGrad)"/>
+  <text x="1535" y="531" font-size="9" font-weight="700" fill="#fff">Step 2</text>
+  <text x="1545" y="554" font-size="10" font-weight="600" fill="#333">NanoDEP Device Lookup</text>
+  <text x="1545" y="570" font-size="9" fill="#666">POST /server/device/lookup</text>
+  <text x="1545" y="586" font-size="9" fill="#666">{serialNumber, model}</text>
+
+  <line x1="1750" y1="555" x2="1820" y2="555" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 3 -->
+  <rect x="1830" y="515" width="220" height="80" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1830" y="515" width="220" height="20" rx="6" fill="url(#iosGrad)"/>
+  <rect x="1830" y="529" width="220" height="6" fill="url(#iosGrad)"/>
+  <text x="1835" y="531" font-size="9" font-weight="700" fill="#fff">Step 3</text>
+  <text x="1845" y="554" font-size="10" font-weight="600" fill="#333">Profile Resolution</text>
+  <text x="1845" y="570" font-size="9" fill="#666">POST /server/device/profile</text>
+  <text x="1845" y="586" font-size="9" fill="#666">Resolve enrollment profile</text>
+
+  <line x1="1940" y1="595" x2="1940" y2="615" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 4 -->
+  <rect x="1830" y="620" width="220" height="80" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1830" y="620" width="220" height="20" rx="6" fill="url(#iosGrad)"/>
+  <rect x="1830" y="634" width="220" height="6" fill="url(#iosGrad)"/>
+  <text x="1835" y="636" font-size="9" font-weight="700" fill="#fff">Step 4</text>
+  <text x="1845" y="659" font-size="10" font-weight="600" fill="#333">Profile Generation</text>
+  <text x="1845" y="675" font-size="9" fill="#666">POST /server/profile/generate</text>
+  <text x="1845" y="691" font-size="9" fill="#666">Build .mobileconfig</text>
+
+  <line x1="1940" y1="700" x2="1940" y2="720" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 5 -->
+  <rect x="1830" y="725" width="220" height="80" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1830" y="725" width="220" height="20" rx="6" fill="url(#iosGrad)"/>
+  <rect x="1830" y="739" width="220" height="6" fill="url(#iosGrad)"/>
+  <text x="1835" y="741" font-size="9" font-weight="700" fill="#fff">Step 5</text>
+  <text x="1845" y="764" font-size="10" font-weight="600" fill="#333">Profile Delivery</text>
+  <text x="1845" y="780" font-size="9" fill="#666">POST /server/profile/download</text>
+  <text x="1845" y="796" font-size="9" fill="#666">MIME: application/x-apple-aspen-config</text>
+
+  <!-- Left column steps 6-9 -->
+  <!-- Step 6 -->
+  <rect x="1230" y="620" width="220" height="80" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1230" y="620" width="220" height="20" rx="6" fill="url(#iosGrad)"/>
+  <rect x="1230" y="634" width="220" height="6" fill="url(#iosGrad)"/>
+  <text x="1235" y="636" font-size="9" font-weight="700" fill="#fff">Step 6</text>
+  <text x="1245" y="659" font-size="10" font-weight="600" fill="#333">Device Installs Profile</text>
+  <text x="1245" y="675" font-size="9" fill="#666">Setup Assistant shows</text>
+  <text x="1245" y="691" font-size="9" fill="#666">"Remote Management" screen</text>
+
+  <line x1="1450" y1="660" x2="1520" y2="660" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 7 -->
+  <rect x="1530" y="620" width="220" height="80" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1530" y="620" width="220" height="20" rx="6" fill="url(#iosGrad)"/>
+  <rect x="1530" y="634" width="220" height="6" fill="url(#iosGrad)"/>
+  <text x="1535" y="636" font-size="9" font-weight="700" fill="#fff">Step 7</text>
+  <text x="1545" y="659" font-size="10" font-weight="600" fill="#333">MDM Check-In</text>
+  <text x="1545" y="675" font-size="9" fill="#666">Authenticate - TokenUpdate</text>
+  <text x="1545" y="691" font-size="9" fill="#666">Device - NanoMDM - Middleware</text>
+
+  <line x1="1750" y1="660" x2="1820" y2="660" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 8 -->
+  <rect x="1230" y="725" width="220" height="80" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1230" y="725" width="220" height="20" rx="6" fill="url(#mdmGrad)"/>
+  <rect x="1230" y="739" width="220" height="6" fill="url(#mdmGrad)"/>
+  <text x="1235" y="741" font-size="9" font-weight="700" fill="#fff">Step 8</text>
+  <text x="1245" y="764" font-size="10" font-weight="600" fill="#333">Event Correlation</text>
+  <text x="1245" y="780" font-size="9" fill="#666">POST /server/events/nanomdm</text>
+  <text x="1245" y="796" font-size="9" fill="#666">Update enrollment lifecycle</text>
+
+  <line x1="1450" y1="765" x2="1520" y2="765" stroke="#007aff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Step 9 -->
+  <rect x="1530" y="725" width="220" height="80" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="1530" y="725" width="220" height="20" rx="6" fill="url(#mdmGrad)"/>
+  <rect x="1530" y="739" width="220" height="6" fill="url(#mdmGrad)"/>
+  <text x="1535" y="741" font-size="9" font-weight="700" fill="#fff">Step 9</text>
+  <text x="1545" y="764" font-size="10" font-weight="600" fill="#333">DeviceConfigured Event</text>
+  <text x="1545" y="780" font-size="9" fill="#666">POST /server/enrollment/</text>
+  <text x="1545" y="796" font-size="9" fill="#666">device-configured - completed</text>
+
+  <!-- Enrollment state machine -->
+  <rect x="1230" y="830" width="520" height="115" rx="6" fill="#ffffff" stroke="#ddd" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1390" y="850" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Enrollment Lifecycle State Machine</text>
+
+  <rect x="1245" y="862" width="68" height="24" rx="12" fill="#ffeaa7" stroke="#fdcb6e" stroke-width="1"/>
+  <text x="1279" y="878" font-size="9" fill="#333" text-anchor="middle">pending</text>
+  <line x1="1313" y1="874" x2="1330" y2="874" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1333" y="862" width="68" height="24" rx="12" fill="#ffeaa7" stroke="#fdcb6e" stroke-width="1"/>
+  <text x="1367" y="878" font-size="9" fill="#333" text-anchor="middle">assigned</text>
+  <line x1="1401" y1="874" x2="1418" y2="874" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1421" y="862" width="80" height="24" rx="12" fill="#81ecec" stroke="#00cec9" stroke-width="1"/>
+  <text x="1461" y="878" font-size="9" fill="#333" text-anchor="middle">profile_gen</text>
+  <line x1="1501" y1="874" x2="1518" y2="874" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1521" y="862" width="70" height="24" rx="12" fill="#81ecec" stroke="#00cec9" stroke-width="1"/>
+  <text x="1556" y="878" font-size="9" fill="#333" text-anchor="middle">delivered</text>
+  <line x1="1591" y1="874" x2="1608" y2="874" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1611" y="862" width="80" height="24" rx="12" fill="#55efc4" stroke="#00b894" stroke-width="1"/>
+  <text x="1651" y="878" font-size="9" fill="#333" text-anchor="middle">enroll_start</text>
+
+  <rect x="1245" y="900" width="75" height="24" rx="12" fill="#74b9ff" stroke="#0984e3" stroke-width="1"/>
+  <text x="1282" y="916" font-size="9" fill="#fff" text-anchor="middle">authenticated</text>
+  <line x1="1320" y1="912" x2="1340" y2="912" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1343" y="900" width="85" height="24" rx="12" fill="#74b9ff" stroke="#0984e3" stroke-width="1"/>
+  <text x="1385" y="916" font-size="9" fill="#fff" text-anchor="middle">checkin_recv</text>
+  <line x1="1428" y1="912" x2="1448" y2="912" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1451" y="900" width="75" height="24" rx="12" fill="#6c5ce7" stroke="#4a3cb5" stroke-width="1"/>
+  <text x="1488" y="916" font-size="9" fill="#fff" text-anchor="middle">mdm_conn</text>
+  <line x1="1526" y1="912" x2="1546" y2="912" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1549" y="900" width="75" height="24" rx="12" fill="#6c5ce7" stroke="#4a3cb5" stroke-width="1"/>
+  <text x="1586" y="916" font-size="9" fill="#fff" text-anchor="middle">configured</text>
+  <line x1="1624" y1="912" x2="1644" y2="912" stroke="#2d3436" stroke-width="1.5" marker-end="url(#arrowBlk)"/>
+  <rect x="1647" y="900" width="68" height="24" rx="12" fill="#00b894" stroke="#008166" stroke-width="1"/>
+  <text x="1681" y="916" font-size="9" fill="#fff" text-anchor="middle">completed</text>
+  <text x="1435" y="943" font-size="8" fill="#999" text-anchor="middle">All states support - failed transition</text>
+
+  <!-- Profile Generation Pipeline -->
+  <rect x="1770" y="830" width="570" height="115" rx="6" fill="#ffffff" stroke="#ddd" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="2055" y="850" font-size="11" font-weight="700" fill="#333" text-anchor="middle">Profile Generation Pipeline (.mobileconfig)</text>
+
+  <rect x="1785" y="862" width="75" height="22" rx="4" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="1822" y="877" font-size="8" fill="#333" text-anchor="middle">1. Validate</text>
+  <line x1="1860" y1="873" x2="1875" y2="873" stroke="#2d3436" stroke-width="1" marker-end="url(#arrowBlk)"/>
+  <rect x="1878" y="862" width="75" height="22" rx="4" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="1915" y="877" font-size="8" fill="#333" text-anchor="middle">2. Load Certs</text>
+  <line x1="1953" y1="873" x2="1968" y2="873" stroke="#2d3436" stroke-width="1" marker-end="url(#arrowBlk)"/>
+  <rect x="1971" y="862" width="75" height="22" rx="4" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="2008" y="877" font-size="8" fill="#333" text-anchor="middle">3. Build MDM</text>
+  <line x1="2046" y1="873" x2="2061" y2="873" stroke="#2d3436" stroke-width="1" marker-end="url(#arrowBlk)"/>
+  <rect x="2064" y="862" width="75" height="22" rx="4" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="2101" y="877" font-size="8" fill="#333" text-anchor="middle">4. Assemble</text>
+  <line x1="2139" y1="873" x2="2154" y2="873" stroke="#2d3436" stroke-width="1" marker-end="url(#arrowBlk)"/>
+  <rect x="2157" y="862" width="75" height="22" rx="4" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="2194" y="877" font-size="8" fill="#333" text-anchor="middle">5. Serialize</text>
+  <line x1="2232" y1="873" x2="2247" y2="873" stroke="#2d3436" stroke-width="1" marker-end="url(#arrowBlk)"/>
+  <rect x="2250" y="862" width="75" height="22" rx="4" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="2287" y="877" font-size="8" fill="#333" text-anchor="middle">6. CMS Sign</text>
+
+  <text x="1975" y="902" font-size="8" fill="#666" text-anchor="middle">Builders: ProfileValidator - CertificateLoader - RootCAPayloadBuilder - IdentityPayloadBuilder</text>
+  <text x="1975" y="918" font-size="8" fill="#666" text-anchor="middle">- MDMPayloadBuilder - PayloadAssembler - XMLSerializer - ProfileSigner</text>
+  <text x="1975" y="938" font-size="8" fill="#888" text-anchor="middle">Output: CMS-signed .mobileconfig (application/x-apple-aspen-config)</text>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 4: CAMERA BLOCK / UNBLOCK + MOBILE REG + OTP -->
+  <!-- ============================================================ -->
+  <rect x="40" y="1030" width="2320" height="430" rx="10" fill="url(#sectionBg)" filter="url(#shadow2)" stroke="#ddd" stroke-width="1"/>
+  <rect x="40" y="1030" width="2320" height="36" rx="10" fill="url(#accentGrad)"/>
+  <rect x="40" y="1056" width="2320" height="10" fill="url(#accentGrad)"/>
+  <text x="60" y="1054" font-size="15" font-weight="700" fill="#ffffff">4. Camera Block/Unblock Flow + Mobile App Registration + OTP Uninstall</text>
+
+  <!-- ====== CAMERA BLOCK ====== -->
+  <rect x="60" y="1080" width="760" height="170" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="440" y="1100" font-size="13" font-weight="700" fill="#d63031" text-anchor="middle">BLOCK CAMERA FLOW</text>
+
+  <rect x="80" y="1115" width="150" height="50" rx="6" fill="url(#adminGrad)" filter="url(#shadow1)"/>
+  <text x="155" y="1135" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">Admin Panel</text>
+  <text x="155" y="1151" font-size="8" fill="#ddd" text-anchor="middle">POST block</text>
+
+  <line x1="230" y1="1140" x2="270" y2="1140" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="280" y="1115" width="140" height="50" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="350" y="1135" font-size="10" font-weight="700" fill="#4a3cb5" text-anchor="middle">DeviceController</text>
+  <text x="350" y="1151" font-size="8" fill="#666" text-anchor="middle">blockDeviceCamera</text>
+
+  <line x1="420" y1="1140" x2="460" y2="1140" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <!-- Android -->
+  <rect x="470" y="1110" width="140" height="60" rx="6" fill="#ffffff" stroke="#3ddc84" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="540" y="1128" font-size="10" font-weight="700" fill="#2abf6a" text-anchor="middle">Android Path</text>
+  <text x="540" y="1145" font-size="8" fill="#555" text-anchor="middle">CameraRestrictionSvc</text>
+  <text x="540" y="1159" font-size="8" fill="#555" text-anchor="middle">XML Profile</text>
+
+  <!-- iOS -->
+  <rect x="470" y="1178" width="140" height="60" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="540" y="1196" font-size="10" font-weight="700" fill="#007aff" text-anchor="middle">iOS Path (NanoMDM)</text>
+  <text x="540" y="1213" font-size="8" fill="#555" text-anchor="middle">mdm/CameraRestrict</text>
+  <text x="540" y="1227" font-size="8" fill="#555" text-anchor="middle">InstProfile cmd</text>
+
+  <line x1="610" y1="1140" x2="650" y2="1140" stroke="#3ddc84" stroke-width="1.5" marker-end="url(#arrowGrn)"/>
+  <line x1="610" y1="1208" x2="650" y2="1208" stroke="#007aff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+
+  <!-- Converged -->
+  <rect x="660" y="1115" width="150" height="120" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="735" y="1139" font-size="10" font-weight="700" fill="#008166" text-anchor="middle">NanoMDMService</text>
+  <text x="735" y="1157" font-size="8" fill="#555" text-anchor="middle">enqueue + push</text>
+  <line x1="680" y1="1172" x2="790" y2="1172" stroke="#ccc" stroke-width="1"/>
+  <text x="735" y="1190" font-size="10" font-weight="700" fill="#008166" text-anchor="middle">DeviceService</text>
+  <text x="735" y="1207" font-size="8" fill="#555" text-anchor="middle">camera_blocked=1</text>
+  <text x="735" y="1221" font-size="8" fill="#555" text-anchor="middle">+ AuditLog + FCM</text>
+
+  <!-- UNBLOCK -->
+  <rect x="60" y="1260" width="760" height="100" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="440" y="1280" font-size="13" font-weight="700" fill="#00b894" text-anchor="middle">UNBLOCK CAMERA FLOW</text>
+
+  <rect x="80" y="1295" width="150" height="50" rx="6" fill="url(#adminGrad)" filter="url(#shadow1)"/>
+  <text x="155" y="1315" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">Admin Panel</text>
+  <text x="155" y="1331" font-size="8" fill="#ddd" text-anchor="middle">POST unblock</text>
+
+  <line x1="230" y1="1320" x2="270" y2="1320" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="280" y="1295" width="160" height="50" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="360" y="1315" font-size="10" font-weight="700" fill="#4a3cb5" text-anchor="middle">CamRestrictService</text>
+  <text x="360" y="1331" font-size="8" fill="#666" text-anchor="middle">unblockCamera</text>
+
+  <line x1="440" y1="1320" x2="480" y2="1320" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="490" y="1295" width="150" height="50" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="565" y="1315" font-size="10" font-weight="700" fill="#008166" text-anchor="middle">ProfileService</text>
+  <text x="565" y="1331" font-size="8" fill="#555" text-anchor="middle">RemoveProfile</text>
+
+  <line x1="640" y1="1320" x2="680" y2="1320" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+
+  <rect x="690" y="1295" width="120" height="50" rx="6" fill="#ffffff" stroke="#3ddc84" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="750" y="1315" font-size="10" font-weight="700" fill="#2abf6a" text-anchor="middle">Device Updated</text>
+  <text x="750" y="1331" font-size="8" fill="#555" text-anchor="middle">cam_blocked=0</text>
+
+  <!-- Profile comparison -->
+  <rect x="60" y="1370" width="760" height="40" rx="6" fill="#ffffff" stroke="#ddd" stroke-width="1" filter="url(#shadow1)"/>
+  <rect x="80" y="1378" width="330" height="24" rx="4" fill="#e8f5e9" stroke="#3ddc84" stroke-width="1"/>
+  <text x="245" y="1394" font-size="9" fill="#2e7d32" text-anchor="middle">Android: com.android.restrictions - allowCamera:false</text>
+  <rect x="420" y="1378" width="380" height="24" rx="4" fill="#e3f2fd" stroke="#007aff" stroke-width="1"/>
+  <text x="610" y="1394" font-size="9" fill="#1565c0" text-anchor="middle">iOS: com.apple.applicationaccess - allowCamera:false via NanoMDM</text>
+
+  <!-- ====== MOBILE REGISTRATION ====== -->
+  <rect x="840" y="1080" width="740" height="150" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="1210" y="1100" font-size="13" font-weight="700" fill="#007aff" text-anchor="middle">MOBILE APP REGISTRATION (Android &amp; iOS)</text>
+
+  <rect x="860" y="1115" width="160" height="50" rx="6" fill="url(#androidGrad)" filter="url(#shadow1)"/>
+  <text x="940" y="1135" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">Mobile App</text>
+  <text x="940" y="1151" font-size="8" fill="#ddd" text-anchor="middle">POST register</text>
+
+  <line x1="1020" y1="1140" x2="1050" y2="1140" stroke="#3ddc84" stroke-width="1.5" marker-end="url(#arrowGrn)"/>
+
+  <rect x="1060" y="1115" width="150" height="50" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1135" y="1135" font-size="10" font-weight="700" fill="#007aff" text-anchor="middle">MobileController</text>
+  <text x="1135" y="1151" font-size="8" fill="#666" text-anchor="middle">registerDevice</text>
+
+  <line x1="1210" y1="1140" x2="1240" y2="1140" stroke="#007aff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+
+  <rect x="1250" y="1115" width="170" height="50" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1335" y="1133" font-size="10" font-weight="700" fill="#008166" text-anchor="middle">MobileService</text>
+  <text x="1335" y="1150" font-size="8" fill="#555" text-anchor="middle">Lookup emp - Find/Create</text>
+  <text x="1335" y="1163" font-size="8" fill="#555" text-anchor="middle">Store push token</text>
+
+  <line x1="1420" y1="1140" x2="1450" y2="1140" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+
+  <rect x="1460" y="1115" width="110" height="50" rx="6" fill="url(#dbGrad)" filter="url(#shadow1)"/>
+  <text x="1515" y="1138" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">DB</text>
+  <text x="1515" y="1154" font-size="8" fill="#fed" text-anchor="middle">devices+emp</text>
+
+  <text x="1000" y="1198" font-size="9" fill="#555" text-anchor="middle">Registers with: device_identifier - device_os (android/ios) - device_name - employee_id - push_token - notification_platform (fcm/apns)</text>
+
+  <!-- ====== OTP UNINSTALL ====== -->
+  <rect x="1600" y="1080" width="740" height="190" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="1970" y="1100" font-size="13" font-weight="700" fill="#e17055" text-anchor="middle">OTP UNINSTALL FLOW (Android &amp; iOS)</text>
+
+  <!-- Request OTP -->
+  <rect x="1620" y="1115" width="140" height="45" rx="6" fill="url(#androidGrad)" filter="url(#shadow1)"/>
+  <text x="1690" y="1133" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">Mobile App</text>
+  <text x="1690" y="1149" font-size="8" fill="#ddd" text-anchor="middle">Req Uninstall OTP</text>
+
+  <line x1="1760" y1="1137" x2="1790" y2="1137" stroke="#3ddc84" stroke-width="1.5" marker-end="url(#arrowGrn)"/>
+
+  <rect x="1800" y="1115" width="200" height="45" rx="6" fill="#ffffff" stroke="#e17055" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1900" y="1133" font-size="10" font-weight="700" fill="#c0392b" text-anchor="middle">MobileService</text>
+  <text x="1900" y="1149" font-size="8" fill="#555" text-anchor="middle">reqUninstallOTP</text>
+
+  <line x1="2000" y1="1137" x2="2030" y2="1137" stroke="#e17055" stroke-width="1.5" marker-end="url(#arrowOrg)"/>
+
+  <rect x="2040" y="1115" width="190" height="45" rx="6" fill="#ffffff" stroke="#e17055" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="2135" y="1133" font-size="10" font-weight="700" fill="#c0392b" text-anchor="middle">OTP Logic</text>
+  <text x="2135" y="1149" font-size="8" fill="#555" text-anchor="middle">Generate 8-digit code</text>
+  <text x="2135" y="1161" font-size="8" fill="#555" text-anchor="middle">Invalidate old - Push FCM</text>
+
+  <!-- Validate OTP -->
+  <rect x="1800" y="1175" width="200" height="45" rx="6" fill="#ffffff" stroke="#d63031" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1900" y="1193" font-size="10" font-weight="700" fill="#c0392b" text-anchor="middle">MobileService</text>
+  <text x="1900" y="1209" font-size="8" fill="#555" text-anchor="middle">validateUninstallOTP</text>
+
+  <line x1="2000" y1="1197" x2="2030" y2="1197" stroke="#d63031" stroke-width="1.5" marker-end="url(#arrowOrg)"/>
+
+  <rect x="2040" y="1175" width="190" height="45" rx="6" fill="#ffffff" stroke="#d63031" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="2135" y="1193" font-size="10" font-weight="700" fill="#c0392b" text-anchor="middle">Validate Logic</text>
+  <text x="2135" y="1209" font-size="8" fill="#555" text-anchor="middle">Check used/exp/attmp</text>
+  <text x="2135" y="1221" font-size="8" fill="#555" text-anchor="middle">status=inactive</text>
+
+  <text x="1800" y="1240" font-size="8" fill="#888" text-anchor="middle">DB: one_time_passwords (is_used, expires_at, attempt_count max=3) - 5 min TTL - 8-digit code</text>
+  <text x="1800" y="1255" font-size="8" fill="#888" text-anchor="middle">Both Android and iOS devices use the same OTP flow via MobileService</text>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 5: DB SCHEMA + AUTH FLOW + MDM COMMAND FLOW -->
+  <!-- ============================================================ -->
+  <rect x="40" y="1480" width="2320" height="380" rx="10" fill="url(#sectionBg)" filter="url(#shadow2)" stroke="#ddd" stroke-width="1"/>
+  <rect x="40" y="1480" width="2320" height="36" rx="10" fill="url(#accentGrad)"/>
+  <rect x="40" y="1506" width="2320" height="10" fill="url(#accentGrad)"/>
+  <text x="60" y="1504" font-size="15" font-weight="700" fill="#ffffff">5. Database ERD + Auth Flow + MDM Command Flow + Scheduler</text>
+
+  <!-- ====== DB SCHEMA ====== -->
+  <!-- users -->
+  <rect x="70" y="1525" width="175" height="120" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="70" y="1525" width="175" height="22" rx="6" fill="url(#adminGrad)"/>
+  <text x="157" y="1541" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">users</text>
+  <text x="82" y="1562" font-size="8" fill="#555">id (UUID, PK)</text>
+  <text x="82" y="1576" font-size="8" fill="#555">username (UNIQUE)</text>
+  <text x="82" y="1590" font-size="8" fill="#555">email, password_hash</text>
+  <text x="82" y="1604" font-size="8" fill="#555">role</text>
+  <text x="82" y="1618" font-size="8" fill="#555">status, last_login</text>
+
+  <!-- employees -->
+  <rect x="270" y="1525" width="175" height="120" rx="6" fill="#ffffff" stroke="#e17055" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="270" y="1525" width="175" height="22" rx="6" fill="url(#dbGrad)"/>
+  <text x="357" y="1541" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">employees</text>
+  <text x="282" y="1562" font-size="8" fill="#555">id (UUID, PK)</text>
+  <text x="282" y="1576" font-size="8" fill="#555">employee_id (UNIQUE)</text>
+  <text x="282" y="1590" font-size="8" fill="#555">first_name, last_name</text>
+  <text x="282" y="1604" font-size="8" fill="#555">dept, phone, email</text>
+  <text x="282" y="1618" font-size="8" fill="#555">device_os, status</text>
+
+  <!-- devices -->
+  <rect x="470" y="1525" width="175" height="135" rx="6" fill="#ffffff" stroke="#007aff" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="470" y="1525" width="175" height="22" rx="6" fill="url(#iosGrad)"/>
+  <text x="557" y="1541" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">devices</text>
+  <text x="482" y="1562" font-size="8" fill="#555">id (UUID, PK)</text>
+  <text x="482" y="1576" font-size="8" fill="#555">emp_id (FK)</text>
+  <text x="482" y="1590" font-size="8" fill="#555">device_identifier (UQ)</text>
+  <text x="482" y="1604" font-size="8" fill="#555">device_os, serial</text>
+  <text x="482" y="1618" font-size="8" fill="#555">camera_blocked</text>
+  <text x="482" y="1632" font-size="8" fill="#555">push_token, status</text>
+  <text x="482" y="1646" font-size="8" fill="#555">camera_blocked_by</text>
+
+  <!-- Other tables summary -->
+  <rect x="670" y="1525" width="175" height="150" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="670" y="1525" width="175" height="22" rx="6" fill="url(#mdmGrad)"/>
+  <text x="757" y="1541" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">MDM Tables</text>
+  <text x="682" y="1562" font-size="8" fill="#555">mdm_devices</text>
+  <text x="682" y="1578" font-size="8" fill="#555">mdm_commands</text>
+  <text x="682" y="1594" font-size="8" fill="#555">device_policies</text>
+  <text x="682" y="1610" font-size="8" fill="#555">ade_enrollments</text>
+  <text x="682" y="1626" font-size="8" fill="#555">enrollment_profiles</text>
+  <text x="682" y="1642" font-size="8" fill="#555">ade_device_assign</text>
+  <text x="682" y="1658" font-size="8" fill="#555">certificate_metadata</text>
+
+  <rect x="870" y="1525" width="175" height="135" rx="6" fill="#ffffff" stroke="#e17055" stroke-width="1.5" filter="url(#shadow1)"/>
+  <rect x="870" y="1525" width="175" height="22" rx="6" fill="url(#dbGrad)"/>
+  <text x="957" y="1541" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">Auxiliary Tables</text>
+  <text x="882" y="1562" font-size="8" fill="#555">audit_logs</text>
+  <text x="882" y="1578" font-size="8" fill="#555">notification_logs</text>
+  <text x="882" y="1594" font-size="8" fill="#555">punch_records</text>
+  <text x="882" y="1610" font-size="8" fill="#555">one_time_passwords</text>
+  <text x="882" y="1626" font-size="8" fill="#555">manual_enrollments</text>
+
+  <!-- Relationships -->
+  <rect x="870" y="1670" width="175" height="85" rx="6" fill="#ffffff" stroke="#ddd" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="957" y="1688" font-size="9" font-weight="700" fill="#555" text-anchor="middle">Relationships</text>
+  <text x="885" y="1703" font-size="8" fill="#666">User 1-N Employee</text>
+  <text x="885" y="1717" font-size="8" fill="#666">Employee 1-N Device</text>
+  <text x="885" y="1731" font-size="8" fill="#666">Device 1-N Policy/OTP</text>
+  <text x="885" y="1745" font-size="8" fill="#666">Device 1-N Audit/Notif</text>
+
+  <!-- ====== AUTH FLOW ====== -->
+  <rect x="1070" y="1525" width="620" height="230" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="1380" y="1545" font-size="13" font-weight="700" fill="#6c5ce7" text-anchor="middle">AUTHENTICATION FLOW - JWT + RBAC</text>
+
+  <!-- Login -->
+  <rect x="1090" y="1560" width="130" height="40" rx="6" fill="#e8e8ee" stroke="#bbb" stroke-width="1.5"/>
+  <text x="1155" y="1578" font-size="10" font-weight="700" fill="#333" text-anchor="middle">Admin/User</text>
+  <text x="1155" y="1592" font-size="8" fill="#666" text-anchor="middle">POST /auth/login</text>
+  <line x1="1220" y1="1580" x2="1250" y2="1580" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="1260" y="1560" width="130" height="40" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5"/>
+  <text x="1325" y="1578" font-size="10" font-weight="700" fill="#4a3cb5" text-anchor="middle">AuthService</text>
+  <text x="1325" y="1592" font-size="8" fill="#666" text-anchor="middle">login+adminLogin</text>
+  <line x1="1390" y1="1580" x2="1420" y2="1580" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="1430" y="1560" width="130" height="40" rx="6" fill="#ffffff" stroke="#e17055" stroke-width="1.5"/>
+  <text x="1495" y="1575" font-size="10" font-weight="700" fill="#c0392b" text-anchor="middle">Validate</text>
+  <text x="1495" y="1590" font-size="8" fill="#555" text-anchor="middle">bcrypt.compare</text>
+  <text x="1495" y="1602" font-size="8" fill="#555" text-anchor="middle">+ role check</text>
+  <line x1="1560" y1="1580" x2="1590" y2="1580" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+
+  <rect x="1600" y="1560" width="80" height="40" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5"/>
+  <text x="1640" y="1578" font-size="10" font-weight="700" fill="#008166" text-anchor="middle">Tokens</text>
+  <text x="1640" y="1592" font-size="8" fill="#555" text-anchor="middle">JWT pair</text>
+
+  <!-- Token Verify -->
+  <rect x="1090" y="1620" width="130" height="40" rx="6" fill="#e8e8ee" stroke="#bbb" stroke-width="1.5"/>
+  <text x="1155" y="1638" font-size="10" font-weight="700" fill="#333" text-anchor="middle">Client</text>
+  <text x="1155" y="1652" font-size="8" fill="#666" text-anchor="middle">Bearer token</text>
+  <line x1="1220" y1="1640" x2="1250" y2="1640" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="1260" y="1620" width="130" height="40" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5"/>
+  <text x="1325" y="1638" font-size="10" font-weight="700" fill="#4a3cb5" text-anchor="middle">authenticate()</text>
+  <text x="1325" y="1652" font-size="8" fill="#666" text-anchor="middle">JWT verify - req.user</text>
+  <line x1="1390" y1="1640" x2="1420" y2="1640" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="1430" y="1620" width="130" height="40" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5"/>
+  <text x="1495" y="1638" font-size="10" font-weight="700" fill="#4a3cb5" text-anchor="middle">authorize()</text>
+  <text x="1495" y="1652" font-size="8" fill="#666" text-anchor="middle">RBAC role check</text>
+  <line x1="1560" y1="1640" x2="1590" y2="1640" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="1600" y="1620" width="80" height="40" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5"/>
+  <text x="1640" y="1638" font-size="10" font-weight="700" fill="#008166" text-anchor="middle">Handler</text>
+  <text x="1640" y="1652" font-size="8" fill="#555" text-anchor="middle">Controller</text>
+
+  <text x="1100" y="1695" font-size="8" fill="#555">HS256 - Access 15m - Refresh 7d - Payload: {id, username, email, role}</text>
+  <text x="1100" y="1710" font-size="8" fill="#555">ADE: X-ADE-API-Key - adeAuth middleware</text>
+  <text x="1100" y="1725" font-size="8" fill="#555">Roles: super_admin - admin - viewer</text>
+
+  <!-- ====== MDM COMMAND + SCHEDULER ====== -->
+  <rect x="1710" y="1525" width="630" height="230" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="2025" y="1545" font-size="13" font-weight="700" fill="#00b894" text-anchor="middle">MDM COMMAND FLOW + SCHEDULER</text>
+
+  <!-- Command flow -->
+  <rect x="1730" y="1560" width="95" height="35" rx="6" fill="url(#adminGrad)" filter="url(#shadow1)"/>
+  <text x="1777" y="1575" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">Admin</text>
+  <text x="1777" y="1588" font-size="7" fill="#ddd" text-anchor="middle">Action</text>
+  <line x1="1825" y1="1577" x2="1845" y2="1577" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="1855" y="1560" width="100" height="35" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1905" y="1575" font-size="9" font-weight="700" fill="#4a3cb5" text-anchor="middle">Create Cmd</text>
+  <text x="1905" y="1588" font-size="7" fill="#666" text-anchor="middle">queued</text>
+  <line x1="1955" y1="1577" x2="1975" y2="1577" stroke="#6c5ce7" stroke-width="1.5" marker-end="url(#arrowPrp)"/>
+
+  <rect x="1985" y="1560" width="100" height="35" rx="6" fill="#ffffff" stroke="#00b894" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="2035" y="1575" font-size="9" font-weight="700" fill="#008166" text-anchor="middle">Enqueue</text>
+  <text x="2035" y="1588" font-size="7" fill="#666" text-anchor="middle">NanoMDM API</text>
+  <line x1="2085" y1="1577" x2="2105" y2="1577" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+
+  <rect x="2115" y="1560" width="95" height="35" rx="6" fill="#16213e" filter="url(#shadow1)"/>
+  <text x="2162" y="1575" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">APNs Push</text>
+  <text x="2162" y="1588" font-size="7" fill="#aaa" text-anchor="middle">Wake</text>
+
+  <line x1="2210" y1="1577" x2="2225" y2="1577" stroke="#007aff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+
+  <rect x="2235" y="1560" width="95" height="35" rx="6" fill="url(#iosGrad)" filter="url(#shadow1)"/>
+  <text x="2282" y="1575" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">Device</text>
+  <text x="2282" y="1588" font-size="7" fill="#ddd" text-anchor="middle">Exec + Ack</text>
+
+  <!-- Scheduler -->
+  <text x="1740" y="1630" font-size="10" font-weight="700" fill="#6c5ce7">BACKGROUND SCHEDULER (SyncScheduler - every 60s)</text>
+
+  <rect x="1730" y="1645" width="190" height="50" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1825" y="1663" font-size="9" font-weight="700" fill="#4a3cb5" text-anchor="middle">Retry Failed Commands</text>
+  <text x="1825" y="1681" font-size="8" fill="#555" text-anchor="middle">Stale &gt;30 min re-queue</text>
+
+  <rect x="1945" y="1645" width="190" height="50" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="2040" y="1663" font-size="9" font-weight="700" fill="#4a3cb5" text-anchor="middle">Cleanup Enrollments</text>
+  <text x="2040" y="1681" font-size="8" fill="#555" text-anchor="middle">90 days inactivity</text>
+
+  <rect x="2160" y="1645" width="170" height="50" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="2245" y="1663" font-size="9" font-weight="700" fill="#4a3cb5" text-anchor="middle">Cleanup Audit Logs</text>
+  <text x="2245" y="1681" font-size="8" fill="#555" text-anchor="middle">365 days retention</text>
+
+  <rect x="1730" y="1705" width="310" height="40" rx="6" fill="#ffffff" stroke="#6c5ce7" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="1885" y="1725" font-size="9" font-weight="700" fill="#4a3cb5" text-anchor="middle">Health Check: NanoMDM GET /version + DB connectivity</text>
+
+  <rect x="2060" y="1705" width="270" height="40" rx="6" fill="#ffffff" stroke="#ddd" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="2195" y="1725" font-size="9" font-weight="700" fill="#555" text-anchor="middle">MDM Proxy: /mdm/* - Unwrap PKCS#7 - Forward - Sign</text>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 6: API ROUTE MAP -->
+  <!-- ============================================================ -->
+  <rect x="40" y="1880" width="2320" height="280" rx="10" fill="url(#sectionBg)" filter="url(#shadow2)" stroke="#ddd" stroke-width="1"/>
+  <rect x="40" y="1880" width="2320" height="36" rx="10" fill="url(#accentGrad)"/>
+  <rect x="40" y="1906" width="2320" height="10" fill="url(#accentGrad)"/>
+  <text x="60" y="1904" font-size="15" font-weight="700" fill="#ffffff">6. API Route Map &#x2014; Complete Endpoint Inventory</text>
+
+  <!-- Column 1: Auth + Admin -->
+  <rect x="60" y="1930" width="560" height="215" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <rect x="60" y="1930" width="560" height="24" rx="6" fill="url(#adminGrad)"/>
+  <text x="340" y="1947" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">Auth &amp; Admin Routes</text>
+  <text x="75" y="1970" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/auth/admin/login     JWT no auth  admin login</text>
+  <text x="75" y="1988" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/auth/login           JWT no auth  user login</text>
+  <text x="75" y="2006" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/auth/refresh         JWT no auth  token refresh</text>
+  <text x="75" y="2024" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/auth/logout          JWT          client logout</text>
+  <text x="75" y="2042" font-size="9" fill="#555" font-family="monospace">GET    /api/v1/auth/me              JWT          current user</text>
+  <line x1="75" y1="2052" x2="600" y2="2052" stroke="#eee" stroke-width="1"/>
+  <text x="75" y="2070" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/admin/devices/:id/block    JWT+admin  block camera</text>
+  <text x="75" y="2088" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/admin/devices/:id/unblock  JWT+admin  unblock camera</text>
+  <text x="75" y="2106" font-size="9" fill="#555" font-family="monospace">GET    /api/v1/admin/employees           JWT+admin  list employees</text>
+  <text x="75" y="2124" font-size="9" fill="#555" font-family="monospace">GET    /api/v1/admin/dashboard/stats     JWT+admin  dashboard</text>
+
+  <!-- Column 2: Mobile + MDM -->
+  <rect x="640" y="1930" width="560" height="215" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <rect x="640" y="1930" width="560" height="24" rx="6" fill="url(#iosGrad)"/>
+  <text x="920" y="1947" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">Mobile &amp; MDM Routes</text>
+  <text x="655" y="1970" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/mobile/devices/register         no auth  reg device</text>
+  <text x="655" y="1988" font-size="9" fill="#555" font-family="monospace">GET    /api/v1/mobile/devices/:id/status        no auth  device status</text>
+  <text x="655" y="2006" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/mobile/devices/punch             no auth  in/out</text>
+  <text x="655" y="2024" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/mobile/devices/.../otp-request   no auth  request OTP</text>
+  <text x="655" y="2042" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/mobile/devices/.../otp-validate  no auth  validate OTP</text>
+  <line x1="655" y1="2052" x2="1180" y2="2052" stroke="#eee" stroke-width="1"/>
+  <text x="655" y="2070" font-size="9" fill="#555" font-family="monospace">GET    /api/v1/mdm/devices               JWT+admin  list MDM devices</text>
+  <text x="655" y="2088" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/mdm/devices/:id/camera/disable   admin  cam off</text>
+  <text x="655" y="2106" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/mdm/devices/:id/camera/enable    admin  cam on</text>
+  <text x="655" y="2124" font-size="9" fill="#555" font-family="monospace">POST   /api/v1/mdm/sync                  JWT+admin  sync devices</text>
+
+  <!-- Column 3: ADE/Server + Other -->
+  <rect x="1220" y="1930" width="560" height="215" rx="6" fill="#ffffff" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow1)"/>
+  <rect x="1220" y="1930" width="560" height="24" rx="6" fill="url(#mdmGrad)"/>
+  <text x="1500" y="1947" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">ADE / Server Routes</text>
+  <text x="1235" y="1970" font-size="9" fill="#555" font-family="monospace">POST   /server/device/lookup       ADE Key   device lookup</text>
+  <text x="1235" y="1988" font-size="9" fill="#555" font-family="monospace">POST   /server/device/profile      ADE Key   resolve profile</text>
+  <text x="1235" y="2006" font-size="9" fill="#555" font-family="monospace">POST   /server/profile/generate    ADE Key   generate .mobileconfig</text>
+  <text x="1235" y="2024" font-size="9" fill="#555" font-family="monospace">POST   /server/enrollment/start    ADE Key   start enrollment</text>
+  <text x="1235" y="2042" font-size="9" fill="#555" font-family="monospace">POST   /server/enrollment/status   ADE Key   update status</text>
+  <line x1="1235" y1="2052" x2="1760" y2="2052" stroke="#eee" stroke-width="1"/>
+  <text x="1235" y="2070" font-size="9" fill="#555" font-family="monospace">POST   /server/events/nanomdm      ADE Key   correlate events</text>
+  <text x="1235" y="2088" font-size="9" fill="#555" font-family="monospace">POST   /server/sync/abm            ADE Key   ABM sync</text>
+  <text x="1235" y="2106" font-size="9" fill="#555" font-family="monospace">POST   /otp/verify                 no auth   OTP verify</text>
+  <text x="1235" y="2124" font-size="9" fill="#555" font-family="monospace">GET    /health                     no auth   health check</text>
+
+  <!-- ============================================================ -->
+  <!-- FOOTER -->
+  <!-- ============================================================ -->
+  <rect x="40" y="2180" width="2320" height="40" rx="8" fill="url(#headerGrad)" filter="url(#shadow2)"/>
+  <text x="1200" y="2205" font-size="12" fill="#8899aa" text-anchor="middle" font-weight="500">SiteSafe Admin Panel &#x2014; Low Level Design Diagram v2.0 &#x2014; Samsung MDM Camera Blocking App &#x2014; July 2026</text>
+  <text x="2200" y="2205" font-size="10" fill="#667788" text-anchor="end">Enterprise Production Ready</text>
+
+</svg>
