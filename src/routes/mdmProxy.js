@@ -563,11 +563,30 @@ router.all('*', async (req, res) => {
   const hasStatus = /<key>\s*Status\s*<\/key>/i.test(bodyStr);
 
   if (msgType || hasStatus) {
-    const sig = rawSignPlist(bodyStr);
-    if (!sig) {
-      logger.error('[MDM Proxy] Cannot sign — no identity loaded');
-      return res.status(500).end();
+    // Use the original Mdm-Signature from the device when available.
+    // The device signs with its per-device identity cert (CA-signed), which
+    // NanoMDM associated with the enrollment during check-in (sent directly,
+    // bypassing this proxy).  Re-signing here with the mdm-identity cert
+    // would cause NanoMDM to reject with "enrollment not associated with cert".
+    const originalSig = req.headers['mdm-signature'];
+    let sig;
+    if (originalSig) {
+      sig = originalSig;
+      logger.info(
+        `[MDM Proxy] Using original Mdm-Signature from device (${originalSig.substring(0, 32)}...)`,
+      );
+    } else {
+      logger.warn(
+        '[MDM Proxy] No original Mdm-Signature — re-signing with mdm-identity cert (fallback)',
+      );
+      const reSigned = rawSignPlist(bodyStr);
+      if (!reSigned) {
+        logger.error('[MDM Proxy] Cannot sign — no identity loaded and no original signature');
+        return res.status(500).end();
+      }
+      sig = reSigned.toString('base64');
     }
+
     const endpoint = msgType ? '/checkin' : '/mdm';
     const nanoUrl = `${NANO_URL()}${endpoint}`;
     const resp = await axios({
@@ -576,7 +595,7 @@ router.all('*', async (req, res) => {
       data: rawBody,
       headers: {
         'Content-Type': 'application/x-apple-aspen-mdm; charset=utf-8',
-        'Mdm-Signature': sig.toString('base64'),
+        'Mdm-Signature': sig,
         Accept: '*/*',
       },
       responseType: 'arraybuffer',
