@@ -1,4 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const forge = require('node-forge');
 const db = require('../models');
 const logger = require('../utils/logger');
 const environment = require('../../config/environment');
@@ -49,8 +52,20 @@ class ManualEnrollmentService {
     };
 
     try {
+      logger.info('[ManualEnroll] Loading CA signing key...');
+      const caInfo = this._loadCAInfo();
+
+      if (caInfo) {
+        logger.info('[ManualEnroll] CA key loaded — device cert will be CA-signed');
+      } else {
+        logger.warn('[ManualEnroll] No CA key configured — device cert will be self-signed');
+        logger.warn(
+          '[ManualEnroll] NanoMDM cert-verify will reject self-signed certs! Set ADE_CA_KEY_PATH.',
+        );
+      }
+
       logger.info('[ManualEnroll] Generating per-device identity certificate...');
-      const deviceCert = DeviceIdentityGenerator.generate(serialNumber);
+      const deviceCert = DeviceIdentityGenerator.generate(serialNumber, caInfo);
       logger.info(`[ManualEnroll] Device identity cert created: CN=${deviceCert.commonName}`);
 
       const mobileconfig = await ADEProfileGenerator.generateMobileconfig(
@@ -185,6 +200,45 @@ class ManualEnrollmentService {
       logger.info(
         `[ManualEnroll] Enrollment marked as failed for ${serialNumber}: ${errorMessage}`,
       );
+    }
+  }
+
+  _loadCAInfo() {
+    const caCertPath = environment.ade.rootCaCertPath;
+    const caKeyPath = environment.ade.caKeyPath;
+
+    if (!caKeyPath) {
+      logger.info('[ManualEnroll] ADE_CA_KEY_PATH not set — cannot sign device certs with CA');
+      return null;
+    }
+
+    if (!caCertPath) {
+      logger.warn('[ManualEnroll] ADE_ROOT_CA_CERT_PATH not set — cannot load CA cert for signing');
+      return null;
+    }
+
+    try {
+      logger.info(`[ManualEnroll] Loading CA cert from: ${caCertPath}`);
+      const caCertPem = fs.readFileSync(path.resolve(caCertPath), 'utf8');
+      const caCert = forge.pki.certificateFromPem(caCertPem);
+
+      logger.info(`[ManualEnroll] Loading CA key from: ${caKeyPath}`);
+      const caKeyPem = fs.readFileSync(path.resolve(caKeyPath), 'utf8');
+      const caKey = forge.pki.decryptRsaPrivateKey(caKeyPem, environment.ade.caKeyPassword || null);
+      if (!caKey) {
+        caKey = forge.pki.privateKeyFromPem(caKeyPem);
+      }
+
+      const caCn = caCert.subject.getField('CN') ? caCert.subject.getField('CN').value : 'Unknown';
+      logger.info(`[ManualEnroll] CA loaded: CN="${caCn}"`);
+
+      return { caCert, caKey };
+    } catch (err) {
+      logger.error(`[ManualEnroll] Failed to load CA key/cert: ${err.message}`);
+      logger.error(
+        '[ManualEnroll] Device cert will be self-signed. Configure ADE_CA_KEY_PATH correctly.',
+      );
+      return null;
     }
   }
 

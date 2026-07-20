@@ -138,6 +138,10 @@ module.exports = {
     identityCertPath: process.env.ADE_IDENTITY_CERT_PATH || '',
     identityCertPassword: process.env.ADE_IDENTITY_CERT_PASSWORD || '',
 
+    // CA key for signing per-device identity certificates
+    caKeyPath: process.env.ADE_CA_KEY_PATH || '',
+    caKeyPassword: process.env.ADE_CA_KEY_PASSWORD || '',
+
     // Device identity messaging — controls Mdm-Signature header
     // Set false when using -cert-header in NanoMDM (TLS client cert forwarding from proxy)
     signMessage: process.env.ADE_SIGN_MESSAGE !== 'false',
